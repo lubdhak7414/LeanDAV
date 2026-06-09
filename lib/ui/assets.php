@@ -483,6 +483,16 @@ function output_ui_css(): void {
             border-color: #4ade80;
         }
 
+        .btn-bulk-zip {
+            border-color: rgba(251, 191, 36, 0.3);
+            color: #fbbf24;
+        }
+
+        .btn-bulk-zip:hover {
+            background: rgba(251, 191, 36, 0.08);
+            border-color: #fbbf24;
+        }
+
         .btn-bulk-delete {
             border-color: rgba(239, 68, 68, 0.3);
             color: #f87171;
@@ -1139,6 +1149,7 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                     if (xhr.status >= 200 && xhr.status < 300) {
                         showToast('Uploaded: ' + file.name, 'success');
                         addFileToList(file.name, file.size);
+                        updateStats();
                     } else {
                         showToast('Upload failed: ' + (xhr.responseText || xhr.statusText), 'error');
                     }
@@ -1157,11 +1168,32 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
             });
         }
 
-        function formatBytes(bytes) {
+function formatBytes(bytes) {
             const units = ['B', 'KB', 'MB', 'GB'];
             let i = 0;
             while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
             return Math.round(bytes * 10) / 10 + ' ' + units[i];
+        }
+
+        // ===== Update sidebar stats =====
+        function updateStats() {
+            const items = fileList.querySelectorAll('.file-item');
+            let files = 0, dirs = 0, totalSize = 0;
+            items.forEach(item => {
+                if (item.style.display === 'none') return;
+                if (item.getAttribute('data-type') === 'dir') {
+                    dirs++;
+                } else {
+                    files++;
+                    totalSize += parseInt(item.getAttribute('data-size') || '0', 10);
+                }
+            });
+            const foldersEl = document.getElementById('statFolders');
+            const filesEl = document.getElementById('statFiles');
+            const totalEl = document.getElementById('statTotal');
+            if (foldersEl) foldersEl.textContent = dirs;
+            if (filesEl) filesEl.textContent = files;
+            if (totalEl) totalEl.textContent = formatBytes(totalSize);
         }
 
         // ===== Add uploaded file to DOM =====
@@ -1227,6 +1259,7 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                     if (item) item.remove();
                     updateSelectionUI();
                     checkEmptyState();
+                    updateStats();
                 } else {
                     showToast('Delete failed: ' + await response.text(), 'error');
                 }
@@ -1302,8 +1335,8 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
             return getCheckboxes().filter(cb => cb.checked).map(cb => cb.value);
         }
 
-        // ===== Bulk Download as ZIP =====
-        async function bulkDownload() {
+// ===== Bulk ZIP & Download =====
+        async function bulkZipDownload() {
             const paths = getSelectedPaths();
             if (paths.length === 0) return;
 
@@ -1324,7 +1357,50 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                     const blob = await response.blob();
                     const disposition = response.headers.get('Content-Disposition') || '';
                     let filename = 'download.zip';
-                    const match = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";\s]+)/i);
+                    const match = disposition.match(/filename\*?=(?:UTF-8''|")(^[";\s]+)/i);
+                    if (match) filename = decodeURIComponent(match[1]);
+
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast('ZIP downloaded (' + paths.length + ' items)', 'success');
+                } else {
+                    showToast('ZIP failed: ' + await response.text(), 'error');
+                }
+            } catch (error) {
+                hideSpinner();
+                showToast('ZIP error: ' + error.message, 'error');
+            }
+        }
+
+// ===== Bulk ZIP =====
+        async function bulkZip() {
+            const paths = getSelectedPaths();
+            if (paths.length === 0) return;
+
+            showSpinner('Creating ZIP…');
+            try {
+                const formData = new FormData();
+                formData.append('csrf_token', csrfToken);
+                paths.forEach(p => formData.append('paths[]', p));
+
+                const response = await fetch('?action=zip-download&path=' + encodeURIComponent(currentPath), {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': csrfToken },
+                    body: formData
+                });
+
+                hideSpinner();
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const disposition = response.headers.get('Content-Disposition') || '';
+                    let filename = 'download.zip';
+                    const match = disposition.match(/filename\*?=(?:UTF-8''|")(^[";\s]+)/i);
                     if (match) filename = decodeURIComponent(match[1]);
 
                     const url = URL.createObjectURL(blob);
@@ -1379,6 +1455,7 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                 showToast('Deleted ' + deleted + (failed ? ', ' + failed + ' failed' : ''), failed === 0 ? 'success' : 'error');
             }
             checkEmptyState();
+            updateStats();
         }
 
         function checkEmptyState() {
@@ -1648,7 +1725,8 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
         window.renameItem = renameItem;
         window.closeModal = closeModal;
         window.sortByColumn = sortByColumn;
-        window.bulkDownload = bulkDownload;
+        window.bulkZipDownload = bulkZipDownload;
+        window.bulkZip = bulkZip;
         window.bulkDelete = bulkDelete;
     })();
     </script>

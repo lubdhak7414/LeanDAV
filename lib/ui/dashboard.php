@@ -71,8 +71,8 @@ function render_dashboard(array $config, string $path): void {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars(basename(rtrim($path, '/')) ?: 'WebDAV'); ?> — WebDAV</title>
-    <meta name="description" content="WebDAV file manager for <?php echo htmlspecialchars($username); ?>">
+    <title><?php echo htmlspecialchars(basename(rtrim($path, '/')) ?: 'LeanDAV'); ?> — LeanDAV</title>
+    <meta name="description" content="LeanDAV file manager for <?php echo htmlspecialchars($username); ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -86,7 +86,7 @@ function render_dashboard(array $config, string $path): void {
                 <div class="logo">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                 </div>
-                <h1>WebDAV Server</h1>
+                <h1>LeanDAV</h1>
             </div>
             <div class="header-right">
                 <div class="user-badge">
@@ -150,9 +150,9 @@ function render_dashboard(array $config, string $path): void {
                 </div>
 
                 <div class="stats">
-                    <div class="stat-row"><span class="stat-icon">📁</span><span class="stat-label">Folders</span><span class="stat-value"><?php echo $total_dirs; ?></span></div>
-                    <div class="stat-row"><span class="stat-icon">📄</span><span class="stat-label">Files</span><span class="stat-value"><?php echo $total_files; ?></span></div>
-                    <div class="stat-row"><span class="stat-icon">💾</span><span class="stat-label">Total</span><span class="stat-value"><?php echo format_size($total_size); ?></span></div>
+                    <div class="stat-row"><span class="stat-icon">📁</span><span class="stat-label">Folders</span><span class="stat-value" id="statFolders"><?php echo $total_dirs; ?></span></div>
+                    <div class="stat-row"><span class="stat-icon">📄</span><span class="stat-label">Files</span><span class="stat-value" id="statFiles"><?php echo $total_files; ?></span></div>
+                    <div class="stat-row"><span class="stat-icon">💾</span><span class="stat-label">Total</span><span class="stat-value" id="statTotal"><?php echo format_size($total_size); ?></span></div>
                 </div>
             </div>
 
@@ -169,10 +169,14 @@ function render_dashboard(array $config, string $path): void {
                         </div>
                     </div>
                     <div class="toolbar-right">
-                        <div class="bulk-actions" id="bulkActions">
+<div class="bulk-actions" id="bulkActions">
                             <span class="selected-count" id="selectedCount">0 selected</span>
-                            <button type="button" class="btn-bulk btn-bulk-download" onclick="bulkDownload()" title="Download selected as ZIP">
+                            <button type="button" class="btn-bulk btn-bulk-download" onclick="bulkZipDownload()" title="ZIP and download selected">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                ZIP & Download
+                            </button>
+                            <button type="button" class="btn-bulk btn-bulk-zip" onclick="bulkZip()" title="Download selected as ZIP">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h1"></path><path d="M13 12h1"></path><path d="M10 15h1"></path><path d="M13 15h1"></path></svg>
                                 ZIP
                             </button>
                             <button type="button" class="btn-bulk btn-bulk-delete" onclick="bulkDelete()" title="Delete selected">
@@ -254,7 +258,7 @@ function render_dashboard(array $config, string $path): void {
                                     <?php endif; ?>
                                     <?php if ($is_zip): ?>
                                         <button type="button" data-action="unzip" onclick="unzipFile('<?php echo htmlspecialchars($entry_url, ENT_QUOTES, 'UTF-8'); ?>', '<?php echo htmlspecialchars(addslashes($entry), ENT_QUOTES, 'UTF-8'); ?>')" aria-label="Extract <?php echo htmlspecialchars($entry); ?>" title="Extract archive">
-                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M12 8v8"></path><path d="M8 12l4 4 4-4"></path></svg>
                                         </button>
                                     <?php endif; ?>
                                     <button type="button" data-action="rename" onclick="showRenameModal(<?php echo json_encode($entry, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>, '<?php echo htmlspecialchars($entry_url, ENT_QUOTES, 'UTF-8'); ?>')" aria-label="Rename <?php echo htmlspecialchars($entry); ?>" title="Rename">

@@ -183,7 +183,7 @@ function render_login_page(array $config, string $error = ''): void {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — WebDAV</title>
+    <title>Login — LeanDAV</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -359,7 +359,7 @@ function render_login_page(array $config, string $error = ''): void {
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                     </svg>
                 </div>
-                <h1>WebDAV Server</h1>
+                <h1>LeanDAV</h1>
                 <p>Sign in to access your files</p>
             </div>
 
