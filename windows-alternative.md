@@ -1,21 +1,3 @@
-# LeanDAV - Server & Windows Setup
-
-## Server Files to Upload
-
-Upload these files to your cPanel `public_html/<subdomain>/` directory:
-
-```
-lib/util.php
-lib/dav.php
-lib/lock.php
-lib/log.php
-lib/compat.php
-lib/ui.php
-lib/auth.php
-public/index.php
-public/.htaccess
-```
-
 ## Windows WebDAV Drive Setup
 
 ### Step 1: Enable Basic Auth (one-time, run as Admin)
@@ -67,14 +49,14 @@ wscript.exe %USERPROFILE%\rclone_mount.vbs
 
 ## Useful Commands
 
-| Action | Command |
-|--------|---------|
-| Check if running | `tasklist \| findstr rclone` |
-| Open drive in Explorer | `explorer Z:\` |
-| Stop mount | `taskkill /f /im rclone.exe` |
-| Manual start | `wscript.exe %USERPROFILE%\rclone_mount.vbs` |
-| Remove scheduled task | `schtasks /delete /tn "RcloneMount" /f` |
-| Test WebDAV access | `curl -u "<username>:<password>" https://<your-domain>/` |
+| Action                 | Command                                                  |
+| ---------------------- | -------------------------------------------------------- |
+| Check if running       | `tasklist \| findstr rclone`                             |
+| Open drive in Explorer | `explorer Z:\`                                           |
+| Stop mount             | `taskkill /f /im rclone.exe`                             |
+| Manual start           | `wscript.exe %USERPROFILE%\rclone_mount.vbs`             |
+| Remove scheduled task  | `schtasks /delete /tn "RcloneMount" /f`                  |
+| Test WebDAV access     | `curl -u "<username>:<password>" https://<your-domain>/` |
 
 ## Uninstall / Cleanup
 
@@ -92,6 +74,7 @@ winget install Iterate.Cyberduck
 ```
 
 Open Cyberduck → Open Connection → WebDAV (HTTPS):
+
 - Server: `<your-domain>`
 - Username: `<username>`
 - Password: `<password>`

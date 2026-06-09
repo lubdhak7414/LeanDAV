@@ -15,7 +15,7 @@
 function dav_error(int $status, string $condition = ''): void {
     http_response_code($status);
     header('Content-Type: application/xml; charset=utf-8');
-    echo '<?xml version="1.0" encoding="utf-8"?>';
+    echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
     echo '<D:error xmlns:D="DAV:">';
     if ($condition) {
         echo "<D:{$condition}/>";

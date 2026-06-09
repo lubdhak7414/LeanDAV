@@ -55,7 +55,6 @@ function handle_propfind(array $config, string $path): void {
 
     // URL-encode the href
     $href = str_replace('%2F', '/', rawurlencode($href));
-    $href = str_replace('%2F', '/', $href); // Keep forward slashes unencoded
 
     generate_propfind_response($xml, $path, $href, $requested_props, $config);
 

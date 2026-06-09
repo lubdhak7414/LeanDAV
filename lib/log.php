@@ -8,6 +8,7 @@
 /**
  * Log a request/response.
  * 
+ * @param array $config Configuration array
  * @param string $method HTTP method
  * @param string $path Request path
  * @param int $status Response status code

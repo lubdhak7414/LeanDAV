@@ -117,7 +117,7 @@ function handle_download_action(string $full_path, string $path, array $config):
 
     // Stream file in chunks to handle large files without memory exhaustion
     flush();
-    ob_end_flush();
+    if (ob_get_level()) { ob_end_flush(); }
     set_time_limit(0);
 
     $handle = fopen($full_path, 'rb');

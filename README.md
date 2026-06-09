@@ -99,6 +99,8 @@ docker-compose up -d
 4. Check "Connect using different credentials"
 5. Enter your username and password
 
+> **Note:** For an alternative method using PowerShell or registry tweaks, see [windows-alternative.md](windows-alternative.md).
+
 ### macOS
 
 1. Open Finder
