@@ -1,406 +1,17 @@
 <?php
 /**
- * Management UI for WebDAV server.
+ * UI asset output helpers.
  *
- * Browser-based dashboard for file management.
+ * Outputs CSS and JavaScript for the dashboard.
  */
 
 /**
- * Generate a CSRF token for form/request protection.
+ * Output the dashboard CSS styles.
  *
- * @return string The token
- */
-function ui_csrf_token(): string {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-    if (empty($_SESSION['ui_csrf_token'])) {
-        $_SESSION['ui_csrf_token'] = bin2hex(random_bytes(32));
-    }
-    return $_SESSION['ui_csrf_token'];
-}
-
-/**
- * Validate a CSRF token.
- *
- * @param string $token Token to validate
- * @return bool True if valid
- */
-function ui_csrf_validate(string $token): bool {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-    return isset($_SESSION['ui_csrf_token']) && hash_equals($_SESSION['ui_csrf_token'], $token);
-}
-
-/**
- * Human-readable upload error message.
- *
- * @param int $code PHP UPLOAD_ERR_* code
- * @return string Human-readable message
- */
-function upload_error_message(int $code): string {
-    $messages = [
-        UPLOAD_ERR_INI_SIZE   => 'File exceeds server upload limit',
-        UPLOAD_ERR_FORM_SIZE  => 'File exceeds form upload limit',
-        UPLOAD_ERR_PARTIAL    => 'File was only partially uploaded',
-        UPLOAD_ERR_NO_FILE    => 'No file was uploaded',
-        UPLOAD_ERR_NO_TMP_DIR => 'Server missing temporary folder',
-        UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
-        UPLOAD_ERR_EXTENSION  => 'Upload blocked by extension',
-    ];
-    return $messages[$code] ?? "Upload error code: {$code}";
-}
-
-/**
- * Sanitize a rename/new-name string for safe filesystem use.
- *
- * @param string $name Raw name input
- * @return string|false Sanitized name, or false if invalid
- */
-function sanitize_name(string $name): string|false {
-    $name = trim($name);
-    if ($name === '' || $name === '.' || $name === '..') {
-        return false;
-    }
-    // Strip null bytes and path separators
-    $name = str_replace(["\0", '/', '\\'], '', $name);
-    // Strip Windows-reserved names (CON, PRN, AUX, NUL, COM1–COM9, LPT1–LPT9)
-    $base = strtoupper(pathinfo($name, PATHINFO_FILENAME));
-    if (in_array($base, ['CON','PRN','AUX','NUL','COM1','COM2','COM3','COM4','COM5','COM6','COM7','COM8','COM9','LPT1','LPT2','LPT3','LPT4','LPT5','LPT6','LPT7','LPT8','LPT9'], true)) {
-        return false;
-    }
-    return $name;
-}
-
-/**
- * Resolve a $_GET['path'] value, decoding URL encoding.
- *
- * @param string $raw Raw GET path
- * @return string Decoded path
- */
-function ui_resolve_get_path(string $raw): string {
-    return rawurldecode($raw);
-}
-
-/**
- * Map a file extension to a display emoji icon.
- *
- * @param string $ext File extension (lowercase)
- * @param bool $is_dir Whether entry is a directory
- * @return string Emoji icon
- */
-function file_type_icon(string $ext, bool $is_dir): string {
-    if ($is_dir) {
-        return '📁';
-    }
-    $icon_map = [
-        // Images
-        'png'  => '🖼️', 'jpg'  => '🖼️', 'jpeg' => '🖼️', 'gif'  => '🖼️',
-        'webp' => '🖼️', 'svg'  => '🖼️', 'bmp'  => '🖼️', 'ico'  => '🖼️',
-        // Video
-        'mp4'  => '🎬', 'webm' => '🎬', 'mkv'  => '🎬', 'avi'  => '🎬',
-        'mov'  => '🎬', 'wmv'  => '🎬',
-        // Audio
-        'mp3'  => '🎵', 'wav'  => '🎵', 'flac' => '🎵', 'aac'  => '🎵',
-        'ogg'  => '🎵', 'wma'  => '🎵',
-        // Archives
-        'zip'  => '📦', 'rar'  => '📦', '7z'   => '📦', 'tar'  => '📦',
-        'gz'   => '📦', 'bz2'  => '📦',
-        // Documents
-        'pdf'  => '📕', 'doc'  => '📘', 'docx' => '📘', 'xls'  => '📗',
-        'xlsx' => '📗', 'ppt'  => '📙', 'pptx' => '📙', 'csv'  => '📊',
-        // Code
-        'php'  => '🔧', 'js'   => '🔧', 'ts'   => '🔧', 'py'   => '🔧',
-        'java' => '🔧', 'c'    => '🔧', 'cpp'  => '🔧', 'h'    => '🔧',
-        'html' => '🔧', 'css'  => '🔧', 'json' => '🔧', 'xml'  => '🔧',
-        'yml'  => '🔧', 'yaml' => '🔧', 'sql'  => '🔧', 'md'   => '🔧',
-        // Text / Config
-        'txt'  => '📄', 'log'  => '📄', 'ini'  => '📄', 'conf' => '📄',
-    ];
-    return $icon_map[$ext] ?? '📄';
-}
-
-/**
- * Handle UI requests (browser-based management).
- *
- * @param array $config Configuration array
  * @return void
  */
-function handle_ui_request(array $config): void {
-    $action = $_GET['action'] ?? null;
-    $path = ui_resolve_get_path($_GET['path'] ?? '/');
-
-    // Handle UI actions
-    if ($action) {
-        handle_ui_action($config, $action, $path);
-        return;
-    }
-
-    // Render dashboard
-    render_dashboard($config, $path);
-}
-
-/**
- * Handle UI actions (upload, download, mkdir, delete, rename).
- *
- * @param array $config Configuration array
- * @param string $action Action to perform
- * @param string $path Resource path
- * @return void
- */
-function handle_ui_action(array $config, string $action, string $path): void {
-    // CSRF protection for all mutating actions
-    if (in_array($action, ['upload', 'mkdir', 'delete', 'rename'])) {
-        $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-        if (!ui_csrf_validate($token)) {
-            http_response_code(403);
-            echo 'Invalid CSRF token';
-            return;
-        }
-    }
-
-    // Validate path via traversal protection
-    $storage = rtrim($config['storage_path'], '/');
-    $resolved = resolve_path($path, $config['storage_path']);
-    if ($resolved === false && $action !== 'mkdir') {
-        http_response_code(403);
-        echo 'Forbidden';
-        return;
-    }
-    $full_path = $resolved !== false ? $resolved : $storage . '/' . ltrim($path, '/');
-
-    switch ($action) {
-        case 'download':
-            // Stream file download
-            if (!file_exists($full_path) || is_dir($full_path)) {
-                http_response_code(404);
-                echo 'File not found';
-                return;
-            }
-
-            $mime = detect_mime($full_path);
-            $size = filesize($full_path);
-
-            header('Content-Type: ' . $mime);
-            header('Content-Length: ' . $size);
-            $dl_name = rawurlencode(basename($full_path));
-            header("Content-Disposition: attachment; filename*=UTF-8''{$dl_name}");
-            header('X-Content-Type-Options: nosniff');
-
-            log_request($config, 'DOWNLOAD', $path, 200);
-            readfile($full_path);
-            break;
-
-        case 'upload':
-            // Handle multipart upload
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                http_response_code(405);
-                echo 'Method not allowed';
-                return;
-            }
-
-            if (!isset($_FILES['file'])) {
-                http_response_code(400);
-                echo 'No file uploaded';
-                return;
-            }
-
-            $file = $_FILES['file'];
-            if ($file['error'] !== UPLOAD_ERR_OK) {
-                http_response_code(500);
-                echo upload_error_message($file['error']);
-                return;
-            }
-
-            // Check file size
-            if ($file['size'] > $config['max_upload_size']) {
-                http_response_code(507);
-                echo 'File too large';
-                return;
-            }
-
-            // Append filename to path
-            if (is_dir($full_path) || substr($full_path, -1) === '/') {
-                $full_path = rtrim($full_path, '/') . '/' . $file['name'];
-            }
-
-            // Ensure target directory exists
-            $target_dir = dirname($full_path);
-            if (!is_dir($target_dir)) {
-                mkdir($target_dir, 0755, true);
-            }
-
-            // Move uploaded file
-            if (move_uploaded_file($file['tmp_name'], $full_path)) {
-                log_request($config, 'UPLOAD', $path . '/' . $file['name'], 201);
-                http_response_code(201);
-                echo 'File uploaded successfully';
-            } else {
-                log_request($config, 'UPLOAD', $path . '/' . $file['name'], 500, 'Failed to move file');
-                http_response_code(500);
-                echo 'Failed to move uploaded file';
-            }
-            break;
-
-        case 'mkdir':
-            // Create directory
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                http_response_code(405);
-                echo 'Method not allowed';
-                return;
-            }
-
-            if (file_exists($full_path)) {
-                http_response_code(409);
-                echo 'Directory already exists';
-                return;
-            }
-
-            if (mkdir($full_path, 0755, true)) {
-                log_request($config, 'MKDIR', $path, 201);
-                http_response_code(201);
-                echo 'Directory created';
-            } else {
-                log_request($config, 'MKDIR', $path, 500, 'mkdir failed');
-                http_response_code(500);
-                echo 'Failed to create directory';
-            }
-            break;
-
-        case 'delete':
-            // Delete file or directory
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                http_response_code(405);
-                echo 'Method not allowed';
-                return;
-            }
-
-            if (!file_exists($full_path)) {
-                http_response_code(404);
-                echo 'File not found';
-                return;
-            }
-
-            if (is_file($full_path)) {
-                unlink($full_path);
-            } else {
-                recursive_delete($full_path);
-            }
-
-            log_request($config, 'DELETE', $path, 204);
-            http_response_code(204);
-            break;
-
-        case 'rename':
-            // Rename file or directory
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                http_response_code(405);
-                echo 'Method not allowed';
-                return;
-            }
-
-            $new_name = sanitize_name($_POST['new_name'] ?? '');
-            if ($new_name === false) {
-                http_response_code(400);
-                echo 'Invalid name';
-                return;
-            }
-            if (empty($new_name)) {
-                http_response_code(400);
-                echo 'New name required';
-                return;
-            }
-
-            $new_path = dirname($full_path) . '/' . $new_name;
-            if (file_exists($new_path)) {
-                http_response_code(409);
-                echo 'Target already exists';
-                return;
-            }
-
-            if (rename($full_path, $new_path)) {
-                log_request($config, 'RENAME', $path . ' → ' . $new_name, 200);
-                http_response_code(200);
-                echo 'Renamed successfully';
-            } else {
-                log_request($config, 'RENAME', $path, 500, 'rename failed');
-                http_response_code(500);
-                echo 'Failed to rename';
-            }
-            break;
-
-        default:
-            http_response_code(400);
-            echo 'Unknown action';
-            break;
-    }
-}
-
-/**
- * Render the management dashboard.
- *
- * @param array $config Configuration array
- * @param string $path Current directory path
- * @return void
- */
-function render_dashboard(array $config, string $path): void {
-    $storage = rtrim($config['storage_path'], '/');
-    $full_path = $storage . '/' . ltrim($path, '/');
-
-    // Ensure path exists
-    if (!is_dir($full_path)) {
-        $full_path = $storage;
-        $path = '/';
-    }
-
-    // Scan directory and compute stats in one pass
-    $entries_raw = scan_directory($full_path, $config['hide_dotfiles'] ?? true);
-    $total_files = 0;
-    $total_size = 0;
-    $entry_meta = [];  // pre-compute metadata for each entry
-    foreach ($entries_raw as $entry) {
-        $entry_path = $full_path . '/' . $entry;
-        $is_dir = is_dir($entry_path);
-        $size = 0;
-        $mtime = 0;
-        if (!$is_dir) {
-            $total_files++;
-            $size = filesize($entry_path);
-            $total_size += $size;
-        }
-        $mtime = filemtime($entry_path);
-        $ext = $is_dir ? '' : strtolower(pathinfo($entry, PATHINFO_EXTENSION));
-        $entry_meta[] = [
-            'name'   => $entry,
-            'is_dir' => $is_dir,
-            'size'   => $size,
-            'mtime'  => $mtime,
-            'ext'    => $ext,
-        ];
-    }
-
-    // Build breadcrumb
-    $breadcrumb = build_breadcrumb($path);
-
-    // Get username for display
-    $username = $config['auth']['username'] ?? 'admin';
-
-    // Get max upload size in MB
-    $max_upload_mb = round($config['max_upload_size'] / 1048576);
-
-    // CSRF token
-    $csrf = ui_csrf_token();
+function output_ui_css(): void {
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebDAV Server</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -439,7 +50,7 @@ function render_dashboard(array $config, string $path): void {
 
         .header .user {
             font-size: 12px;
-            color: #5a5550;
+            color: #a09b94;
         }
 
         .breadcrumb {
@@ -464,7 +75,7 @@ function render_dashboard(array $config, string $path): void {
         }
 
         .breadcrumb .separator {
-            color: #5a5550;
+            color: #a09b94;
             margin: 0 4px;
         }
 
@@ -503,16 +114,16 @@ function render_dashboard(array $config, string $path): void {
             }
 
             .content-header {
-                grid-template-columns: 1fr 80px 60px !important;
+                grid-template-columns: 1fr 80px 60px;
             }
 
             .file-item {
-                grid-template-columns: 1fr 80px 60px !important;
+                grid-template-columns: 1fr 80px 60px;
             }
 
             .file-item .actions {
-                position: static !important;
-                opacity: 1 !important;
+                position: static;
+                opacity: 1;
             }
 
             .file-item .modified {
@@ -533,7 +144,7 @@ function render_dashboard(array $config, string $path): void {
         .sidebar h2 {
             font-size: 14px;
             font-weight: 500;
-            color: #5a5550;
+            color: #a09b94;
             margin-bottom: 15px;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -555,6 +166,11 @@ function render_dashboard(array $config, string $path): void {
             background: rgba(232, 165, 48, 0.05);
         }
 
+        .upload-zone:focus {
+            outline: 2px solid #e8a530;
+            outline-offset: 2px;
+        }
+
         .upload-zone .icon {
             font-size: 32px;
             margin-bottom: 10px;
@@ -562,7 +178,13 @@ function render_dashboard(array $config, string $path): void {
 
         .upload-zone .text {
             font-size: 12px;
-            color: #5a5550;
+            color: #a09b94;
+        }
+
+        .upload-zone .hint {
+            font-size: 11px;
+            color: #777;
+            margin-top: 8px;
         }
 
         .btn {
@@ -610,7 +232,7 @@ function render_dashboard(array $config, string $path): void {
             padding-top: 20px;
             border-top: 1px solid #2a2a2a;
             font-size: 12px;
-            color: #5a5550;
+            color: #a09b94;
         }
 
         .stats .value {
@@ -636,12 +258,25 @@ function render_dashboard(array $config, string $path): void {
         }
 
         .search-box input::placeholder {
-            color: #3a3a3a;
+            color: #777;
         }
 
         .search-box input:focus {
             outline: none;
             border-color: #e8a530;
+        }
+
+        /* Visually hidden for screen readers */
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
 
         /* Sort controls */
@@ -656,7 +291,7 @@ function render_dashboard(array $config, string $path): void {
             background: transparent;
             border: 1px solid #2a2a2a;
             border-radius: 4px;
-            color: #5a5550;
+            color: #a09b94;
             font-family: inherit;
             font-size: 11px;
             cursor: pointer;
@@ -665,7 +300,7 @@ function render_dashboard(array $config, string $path): void {
 
         .sort-btn:hover {
             color: #e8e4dc;
-            border-color: #5a5550;
+            border-color: #a09b94;
         }
 
         .sort-btn.active {
@@ -684,7 +319,7 @@ function render_dashboard(array $config, string $path): void {
             padding: 15px 20px;
             border-bottom: 1px solid #2a2a2a;
             font-size: 11px;
-            color: #5a5550;
+            color: #a09b94;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
@@ -700,6 +335,9 @@ function render_dashboard(array $config, string $path): void {
             border-bottom: 1px solid #1a1a1a;
             font-size: 13px;
             transition: background 0.1s;
+        }
+
+        .file-item[data-type="dir"] {
             cursor: pointer;
         }
 
@@ -728,7 +366,7 @@ function render_dashboard(array $config, string $path): void {
 
         .file-item .size,
         .file-item .modified {
-            color: #5a5550;
+            color: #a09b94;
         }
 
         .file-item .actions {
@@ -739,14 +377,15 @@ function render_dashboard(array $config, string $path): void {
             transition: opacity 0.15s;
         }
 
-        .file-item:hover .actions {
+        .file-item:hover .actions,
+        .file-item:focus-within .actions {
             opacity: 1;
         }
 
         .file-item .actions button {
             background: transparent;
             border: none;
-            color: #5a5550;
+            color: #a09b94;
             cursor: pointer;
             padding: 4px;
             font-size: 14px;
@@ -766,7 +405,7 @@ function render_dashboard(array $config, string $path): void {
             align-items: center;
             justify-content: center;
             min-height: 400px;
-            color: #5a5550;
+            color: #a09b94;
             font-size: 14px;
         }
 
@@ -802,7 +441,7 @@ function render_dashboard(array $config, string $path): void {
             max-width: 400px;
         }
 
-        .modal-content h3 {
+        .modal-content h2 {
             font-size: 16px;
             margin-bottom: 20px;
         }
@@ -861,7 +500,7 @@ function render_dashboard(array $config, string $path): void {
 
         .progress-text {
             font-size: 11px;
-            color: #5a5550;
+            color: #a09b94;
             margin-top: 8px;
         }
 
@@ -898,163 +537,41 @@ function render_dashboard(array $config, string $path): void {
             display: none;
         }
     </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>WebDAV Server</h1>
-            <span class="user">user: <?php echo htmlspecialchars($username); ?></span>
-        </div>
+<?php
+}
 
-        <div class="breadcrumb">
-            <?php
-            // Up button (skip at root)
-            if ($path !== '/') {
-                $parent = rtrim(dirname(rtrim($path, '/')), '/') ?: '/';
-                echo '<a class="up-btn" href="?path=' . htmlspecialchars(rawurlencode($parent)) . '" title="Go up">↑</a>';
-            }
-            ?>
-            <?php echo $breadcrumb; ?>
-        </div>
-
-        <div class="main">
-            <div class="sidebar">
-                <h2>Actions</h2>
-
-                <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="🔍  Filter files…" autocomplete="off">
-                </div>
-
-                <div class="upload-zone" id="uploadZone">
-                    <div class="icon">📁</div>
-                    <div class="text">Drag & drop files here<br>or click to select</div>
-                </div>
-
-                <input type="file" id="fileInput" multiple>
-
-                <button class="btn" onclick="document.getElementById('fileInput').click()">
-                    Select Files
-                </button>
-
-                <button class="btn btn-secondary" onclick="showNewFolderModal()">
-                    + New Folder
-                </button>
-
-                <div class="progress" id="progress">
-                    <div class="progress-bar">
-                        <div class="progress-bar-fill" id="progressFill"></div>
-                    </div>
-                    <div class="progress-text" id="progressText">Uploading…</div>
-                </div>
-
-                <div class="stats">
-                    <div>Files: <span class="value"><?php echo $total_files; ?></span></div>
-                    <div>Size: <span class="value"><?php echo format_size($total_size); ?></span></div>
-                </div>
-            </div>
-
-            <div class="content">
-                <div class="content-header">
-                    <span>Name</span>
-                    <span>Size</span>
-                    <span>Modified</span>
-                    <span>Actions</span>
-                </div>
-
-                <div class="sort-controls" style="padding: 10px 20px 0;">
-                    <button class="sort-btn active" data-sort="name" onclick="sortFiles('name', this)">Name</button>
-                    <button class="sort-btn" data-sort="size" onclick="sortFiles('size', this)">Size</button>
-                    <button class="sort-btn" data-sort="date" onclick="sortFiles('date', this)">Date</button>
-                </div>
-
-                <div class="file-list" id="fileList">
-                    <?php if (empty($entry_meta)): ?>
-                        <div class="empty-state" id="emptyState">
-                            <div class="icon">📭</div>
-                            <div>No files yet</div>
-                        </div>
-                    <?php else: ?>
-                        <?php foreach ($entry_meta as $meta): ?>
-                            <?php
-                            $entry = $meta['name'];
-                            $is_dir = $meta['is_dir'];
-                            $entry_url = rtrim($path, '/') . '/' . rawurlencode($entry);
-                            if ($is_dir) $entry_url .= '/';
-                            ?>
-                            <div class="file-item"
-                                 data-path="<?php echo htmlspecialchars($entry_url); ?>"
-                                 data-type="<?php echo $is_dir ? 'dir' : 'file'; ?>"
-                                 data-name="<?php echo htmlspecialchars(strtolower($entry)); ?>"
-                                 data-size="<?php echo $meta['size']; ?>"
-                                 data-mtime="<?php echo $meta['mtime']; ?>"
-                                 data-search="<?php echo htmlspecialchars(strtolower($entry)); ?>">
-                                <div class="name">
-                                    <span class="icon"><?php echo file_type_icon($meta['ext'], $is_dir); ?></span>
-                                    <?php if ($is_dir): ?>
-                                        <a href="?path=<?php echo htmlspecialchars(rtrim($path, '/') . '/' . $entry); ?>"><?php echo htmlspecialchars($entry); ?></a>
-                                    <?php else: ?>
-                                        <span class="name-text"><?php echo htmlspecialchars($entry); ?></span>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="size"><?php echo $is_dir ? '—' : format_size($meta['size']); ?></div>
-                                <div class="modified"><?php echo date('M d, Y', $meta['mtime']); ?></div>
-                                <div class="actions">
-                                    <?php if (!$is_dir): ?>
-                                        <button onclick="downloadFile('<?php echo htmlspecialchars($entry_url); ?>')" title="Download">⬇</button>
-                                    <?php endif; ?>
-                                    <button onclick="showRenameModal('<?php echo htmlspecialchars(addcslashes($entry, "'\\\n\r") ); ?>', '<?php echo htmlspecialchars($entry_url); ?>')" title="Rename">✏️</button>
-                                    <button class="delete" onclick="deleteItem('<?php echo htmlspecialchars($entry_url); ?>', '<?php echo htmlspecialchars(addcslashes($entry, "'\\\n\r") ); ?>')" title="Delete">🗑️</button>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- New Folder Modal -->
-    <div class="modal" id="newFolderModal">
-        <div class="modal-content">
-            <h3>New Folder</h3>
-            <input type="text" id="newFolderName" placeholder="Folder name" autocomplete="off">
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal('newFolderModal')">Cancel</button>
-                <button class="btn" onclick="createFolder()">Create</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Rename Modal -->
-    <div class="modal" id="renameModal">
-        <div class="modal-content">
-            <h3>Rename</h3>
-            <input type="text" id="renameName" placeholder="New name" autocomplete="off">
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal('renameModal')">Cancel</button>
-                <button class="btn" onclick="renameItem()">Rename</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast -->
-    <div class="toast" id="toast"></div>
-
+/**
+ * Output the dashboard JavaScript.
+ *
+ * @param string $path Current path
+ * @param int $max_upload_size Max upload size in bytes
+ * @param string $csrf_token CSRF token
+ * @param int $max_upload_mb Max upload size in MB
+ * @return void
+ */
+function output_ui_js(string $path, int $max_upload_size, string $csrf_token, int $max_upload_mb): void {
+?>
     <script>
+    "use strict";
+    (() => {
         // Current path and CSRF token
         const currentPath = <?php echo json_encode($path); ?>;
-        const maxUploadSize = <?php echo (int)$config['max_upload_size']; ?>;
-        const csrfToken = <?php echo json_encode($csrf); ?>;
+        const maxUploadSize = <?php echo (int)$max_upload_size; ?>;
+        const csrfToken = <?php echo json_encode($csrf_token); ?>;
         const uploadMaxMb = <?php echo (int)$max_upload_mb; ?>;
 
         // ===== Upload Zone =====
         const uploadZone = document.getElementById('uploadZone');
         const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
 
         uploadZone.addEventListener('click', () => fileInput.click());
-
-        // Also support drag-and-drop on the entire file list area
-        const fileList = document.getElementById('fileList');
+        uploadZone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInput.click();
+            }
+        });
 
         function setupDragZone(el) {
             el.addEventListener('dragover', (e) => {
@@ -1062,7 +579,6 @@ function render_dashboard(array $config, string $path): void {
                 uploadZone.classList.add('dragover');
             });
             el.addEventListener('dragleave', (e) => {
-                // Only remove if leaving the element entirely
                 if (!el.contains(e.relatedTarget)) {
                     uploadZone.classList.remove('dragover');
                 }
@@ -1081,7 +597,6 @@ function render_dashboard(array $config, string $path): void {
 
         fileInput.addEventListener('change', (e) => {
             handleFiles(e.target.files);
-            // Reset input so selecting the same file again triggers change
             fileInput.value = '';
         });
 
@@ -1107,6 +622,7 @@ function render_dashboard(array $config, string $path): void {
             if (uploadIndex >= uploadQueue.length) {
                 uploadQueue = [];
                 uploadIndex = 0;
+                uploading = false;
                 return;
             }
 
@@ -1139,12 +655,14 @@ function render_dashboard(array $config, string $path): void {
                     if (e.lengthComputable) {
                         const pct = Math.round((e.loaded / e.total) * 100);
                         progressFill.style.width = pct + '%';
+                        progress.setAttribute('aria-valuenow', pct);
                         progressText.textContent = 'Uploading ' + current + ' of ' + total + ': ' + file.name + ' (' + pct + '%)';
                     }
                 });
 
                 xhr.addEventListener('load', () => {
                     progress.classList.remove('active');
+                    progress.setAttribute('aria-valuenow', '0');
                     if (xhr.status >= 200 && xhr.status < 300) {
                         showToast('Uploaded: ' + file.name, 'success');
                     } else {
@@ -1155,6 +673,7 @@ function render_dashboard(array $config, string $path): void {
 
                 xhr.addEventListener('error', () => {
                     progress.classList.remove('active');
+                    progress.setAttribute('aria-valuenow', '0');
                     showToast('Upload error for: ' + file.name, 'error');
                     resolve();
                 });
@@ -1173,7 +692,7 @@ function render_dashboard(array $config, string $path): void {
 
         // ===== Download =====
         function downloadFile(path) {
-            window.location.href = '?action=download&path=' + encodeURIComponent(path);
+            window.location.href = '?action=download&path=' + path;
         }
 
         // ===== Delete =====
@@ -1191,7 +710,15 @@ function render_dashboard(array $config, string $path): void {
 
                 if (response.ok) {
                     showToast('Deleted: ' + name, 'success');
-                    setTimeout(() => location.reload(), 500);
+                    // Remove the item from DOM instead of reloading
+                    const item = fileList.querySelector('[data-path="' + CSS.escape(path) + '"]');
+                    if (item) {
+                        item.remove();
+                    }
+                    // Show empty state if no items left
+                    if (fileList.querySelectorAll('.file-item').length === 0) {
+                        fileList.innerHTML = '<div class="empty-state" id="emptyState"><div class="icon">📭</div><div>No files yet</div></div>';
+                    }
                 } else {
                     const text = await response.text();
                     showToast('Delete failed: ' + text, 'error');
@@ -1202,7 +729,10 @@ function render_dashboard(array $config, string $path): void {
         }
 
         // ===== New Folder Modal =====
+        let lastFocusedElement = null;
+
         function showNewFolderModal() {
+            lastFocusedElement = document.activeElement;
             document.getElementById('newFolderModal').classList.add('active');
             const input = document.getElementById('newFolderName');
             input.value = '';
@@ -1242,6 +772,7 @@ function render_dashboard(array $config, string $path): void {
 
         function showRenameModal(currentName, path) {
             renamePath = path;
+            lastFocusedElement = document.activeElement;
             const input = document.getElementById('renameName');
             input.value = currentName;
             document.getElementById('renameModal').classList.add('active');
@@ -1280,6 +811,36 @@ function render_dashboard(array $config, string $path): void {
         // ===== Modal Helpers =====
         function closeModal(id) {
             document.getElementById(id).classList.remove('active');
+            // Return focus to the element that triggered the modal
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+                lastFocusedElement = null;
+            }
+        }
+
+        // Focus trap for modals
+        function trapFocus(modal) {
+            const focusable = modal.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])');
+            if (focusable.length === 0) return;
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+
+            modal.addEventListener('keydown', (e) => {
+                if (e.key !== 'Tab') return;
+
+                if (e.shiftKey) {
+                    if (document.activeElement === first) {
+                        e.preventDefault();
+                        last.focus();
+                    }
+                } else {
+                    if (document.activeElement === last) {
+                        e.preventDefault();
+                        first.focus();
+                    }
+                }
+            });
         }
 
         // Enter key submits the active modal
@@ -1311,7 +872,9 @@ function render_dashboard(array $config, string $path): void {
         // Close modals on Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+                document.querySelectorAll('.modal.active').forEach(m => {
+                    closeModal(m.id);
+                });
             }
         });
 
@@ -1319,9 +882,11 @@ function render_dashboard(array $config, string $path): void {
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
-                    modal.classList.remove('active');
+                    closeModal(modal.id);
                 }
             });
+            // Set up focus trap
+            trapFocus(modal);
         });
 
         // ===== Client-side Search / Filter =====
@@ -1329,15 +894,37 @@ function render_dashboard(array $config, string $path): void {
         searchInput.addEventListener('input', () => {
             const q = searchInput.value.toLowerCase().trim();
             const items = fileList.querySelectorAll('.file-item');
+            let visibleCount = 0;
+
             items.forEach(item => {
                 const name = item.getAttribute('data-search') || '';
-                item.style.display = (!q || name.includes(q)) ? '' : 'none';
+                const visible = !q || name.includes(q);
+                item.style.display = visible ? '' : 'none';
+                if (visible) visibleCount++;
             });
+
+            // Show empty state if filtering hides all items
+            let emptyState = document.getElementById('emptyState');
+            if (visibleCount === 0 && q) {
+                if (!emptyState) {
+                    emptyState = document.createElement('div');
+                    emptyState.id = 'emptyState';
+                    emptyState.className = 'empty-state';
+                    emptyState.innerHTML = '<div class="icon">🔍</div><div>No matching files</div>';
+                    fileList.appendChild(emptyState);
+                }
+                emptyState.style.display = '';
+            } else if (emptyState) {
+                emptyState.style.display = 'none';
+            }
         });
 
         // ===== Client-side Sorting =====
         let currentSort = 'name';
         let sortAsc = true;
+
+        // Sort button base labels
+        const sortLabels = { name: 'Name', size: 'Size', date: 'Date' };
 
         function sortFiles(field, btn) {
             if (currentSort === field) {
@@ -1347,10 +934,14 @@ function render_dashboard(array $config, string $path): void {
                 sortAsc = true;
             }
 
-            // Update button states
-            document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+            // Reset all button texts to base labels, then update active one
+            document.querySelectorAll('.sort-btn').forEach(b => {
+                const sortField = b.getAttribute('data-sort');
+                b.classList.remove('active');
+                b.textContent = sortLabels[sortField] || sortField;
+            });
             btn.classList.add('active');
-            btn.textContent = (field === 'name' ? 'Name' : field === 'size' ? 'Size' : 'Date') + (sortAsc ? ' ▲' : ' ▼');
+            btn.textContent = sortLabels[field] + (sortAsc ? ' ▲' : ' ▼');
 
             const items = Array.from(fileList.querySelectorAll('.file-item'));
 
@@ -1381,48 +972,22 @@ function render_dashboard(array $config, string $path): void {
                 }
             });
 
+            // Also move any empty state element to the end
+            const emptyState = document.getElementById('emptyState');
             items.forEach(item => fileList.appendChild(item));
+            if (emptyState) fileList.appendChild(emptyState);
         }
+
+        // Make functions globally accessible for onclick handlers
+        window.downloadFile = downloadFile;
+        window.deleteItem = deleteItem;
+        window.showNewFolderModal = showNewFolderModal;
+        window.createFolder = createFolder;
+        window.showRenameModal = showRenameModal;
+        window.renameItem = renameItem;
+        window.closeModal = closeModal;
+        window.sortFiles = sortFiles;
+    })();
     </script>
-</body>
-</html>
 <?php
-}
-
-/**
- * Build breadcrumb HTML.
- *
- * @param string $path Current path
- * @return string HTML breadcrumb
- */
-function build_breadcrumb(string $path): string {
-    $parts = array_filter(explode('/', $path));
-    $html = '<a href="?path=/">/</a>';
-
-    $current = '';
-    foreach ($parts as $part) {
-        $current .= '/' . $part;
-        $html .= '<span class="separator">›</span>';
-        $html .= '<a href="?path=' . htmlspecialchars(rawurlencode($current)) . '">' . htmlspecialchars($part) . '</a>';
-    }
-
-    return $html;
-}
-
-/**
- * Format file size to human-readable string.
- *
- * @param int $bytes File size in bytes
- * @return string Formatted size
- */
-function format_size(int $bytes): string {
-    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    $i = 0;
-
-    while ($bytes >= 1024 && $i < count($units) - 1) {
-        $bytes /= 1024;
-        $i++;
-    }
-
-    return round($bytes, 1) . ' ' . $units[$i];
 }
