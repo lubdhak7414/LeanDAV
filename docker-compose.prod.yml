@@ -1,0 +1,41 @@
+# Production compose with Caddy reverse proxy for automatic HTTPS
+# Usage: docker compose -f docker-compose.prod.yml up -d
+
+services:
+  webdav:
+    build: .
+    container_name: webdav-server
+    expose:
+      - "80"  # Only expose internally, Caddy handles external
+    volumes:
+      - webdav-data:/var/www/data
+      - ./config.php:/var/www/config.php:ro
+    environment:
+      - TZ=UTC
+    restart: unless-stopped
+    networks:
+      - webdav
+
+  # Caddy reverse proxy with automatic HTTPS
+  caddy:
+    image: caddy:latest
+    container_name: webdav-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+    networks:
+      - webdav
+
+volumes:
+  webdav-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  webdav:

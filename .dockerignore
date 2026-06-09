@@ -1,0 +1,11 @@
+.git
+.pi
+.gitignore
+data/
+*.md
+*.example
+*.vbs
+docker-compose*.yml
+Dockerfile
+Caddyfile
+LICENSE

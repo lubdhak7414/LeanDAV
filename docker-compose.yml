@@ -1,11 +1,21 @@
-version: "3.8"
 services:
   webdav:
     build: .
+    container_name: webdav-server
     ports:
-      - "8080:80"
+      - "${PORT:-8080}:80"
     volumes:
+      # Persistent file storage
       - ./data:/var/www/data
-      - ./config.php:/var/www/config.php
-      - ./logs:/var/www/data/.logs
+      # Mount config file if it exists, or use example as fallback
+      - ./config.php:/var/www/config.php:ro
+    environment:
+      # Override config values via environment variables if needed
+      - TZ=UTC
     restart: unless-stopped
+    # Optional: limit resources
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 256M
+    #       cpus: '0.5'

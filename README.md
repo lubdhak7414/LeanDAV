@@ -82,12 +82,38 @@ return [
 
 ## Docker Deployment
 
+### Quick Start
+
 ```bash
+# Create config file
+cp config.example.php config.php
+# Edit config.php with your credentials
+
 # Build and start
-docker-compose up -d
+docker compose up -d
 
 # Access at http://localhost:8080
 ```
+
+### Production with HTTPS (Caddy)
+
+```bash
+# Edit Caddyfile with your domain
+# Edit docker-compose.prod.yml if needed
+
+# Start with automatic HTTPS
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Docker Commands
+
+| Command | Description |
+| --- | --- |
+| `docker compose up -d` | Start in background |
+| `docker compose down` | Stop and remove |
+| `docker compose logs -f` | View logs |
+| `docker compose build` | Rebuild image |
+| `docker compose exec webdav sh` | Shell into container |
 
 ## Mount as Network Drive
 

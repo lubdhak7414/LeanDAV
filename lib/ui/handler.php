@@ -506,12 +506,7 @@ function handle_unzip_action(string $full_path, string $path, array $config): vo
  * @return void
  */
 function handle_logout_action(): void {
-    http_response_code(401);
-    header('WWW-Authenticate: Basic realm="WebDAV Server", charset="UTF-8"');
-    header('Content-Type: text/html; charset=utf-8');
-    echo '<!DOCTYPE html><html><head><title>Logged Out</title></head><body>';
-    echo '<h2>You have been logged out.</h2>';
-    echo '<p><a href="/">Back to file manager</a></p>';
-    echo '</body></html>';
+    do_logout();
+    header('Location: /');
     exit;
 }
