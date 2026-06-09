@@ -1,0 +1,40 @@
+server {
+    listen 443 ssl http2;
+    server_name s3.saf1.me;
+
+    ssl_certificate     /etc/letsencrypt/live/s3.saf1.me/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/s3.saf1.me/privkey.pem;
+
+    root /var/www/saf1.me/public;
+    index index.php;
+
+    # Upload limits
+    client_max_body_size 100M;
+    client_body_buffer_size 16k;
+    client_body_temp_path /var/cache/nginx/client_temp;
+
+    location / {
+        try_files $uri $uri/ /index.php$is_args$args;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+
+        # Pass WebDAV headers to PHP
+        fastcgi_param HTTP_DEPTH $http_depth;
+        fastcgi_param HTTP_DESTINATION $http_destination;
+        fastcgi_param HTTP_IF $http_if;
+        fastcgi_param HTTP_LOCK_TOKEN $http_lock_token;
+        fastcgi_param HTTP_OVERWRITE $http_overwrite;
+        fastcgi_param HTTP_IF_NONE_MATCH $http_if_none_match;
+        fastcgi_param HTTP_RANGE $http_range;
+    }
+
+    # Block direct access to data directory
+    location /data/ {
+        deny all;
+        return 404;
+    }
+}

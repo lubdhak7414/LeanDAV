@@ -1,0 +1,19 @@
+RewriteEngine On
+
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Route everything to index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Disable directory listing
+Options -Indexes
+
+# Correct charset
+AddDefaultCharset UTF-8
+
+# Security headers
+Header always set X-Content-Type-Options "nosniff"

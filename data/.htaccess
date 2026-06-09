@@ -1,0 +1,9 @@
+Deny from all
+
+<FilesMatch "\.(php|phtml|php3|php4|php5|pl|py|jsp|asp|sh|cgi)$">
+    SetHandler None
+    ForceType text/plain
+</FilesMatch>
+
+# Disable PHP engine entirely in this directory
+php_flag engine off
