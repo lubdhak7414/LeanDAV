@@ -24,8 +24,8 @@ A zero-dependency PHP application implementing the WebDAV protocol (RFC 4918) fo
 ### 1. Clone and Configure
 
 ```bash
-git clone <repository-url>
-cd <directory>
+git clone https://github.com/lubdhak7414/LeanDAV/
+cd LeanDAV
 cp config.example.php config.php
 # Edit config.php with your credentials and settings
 ```
