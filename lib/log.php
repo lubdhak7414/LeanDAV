@@ -14,8 +14,7 @@
  * @param string|null $error Optional error message
  * @return void
  */
-function log_request(string $method, string $path, int $status, ?string $error = null): void {
-    global $config;
+function log_request(array $config, string $method, string $path, int $status, ?string $error = null): void {
     
     // Check log level
     $log_level = $config['log_level'] ?? 'info';

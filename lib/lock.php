@@ -191,6 +191,10 @@ function handle_unlock(array $config, string $path): void {
     
     // Read lock data
     $lock_data = json_decode(file_get_contents($lock_file), true);
+    if (!$lock_data || !isset($lock_data['token'])) {
+        dav_error(409, 'Conflict');
+        return;
+    }
     
     // Verify token matches
     if ($lock_data['token'] !== $lock_token) {

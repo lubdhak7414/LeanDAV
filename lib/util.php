@@ -29,28 +29,28 @@ function resolve_path(string $uri, string $storage) {
     $full_path = rtrim($storage, '/') . '/' . $path;
     
     // Normalize path (resolve . and ..)
-    $full_path = realpath($full_path);
-    
-    // Check if path exists
-    if ($full_path === false) {
-        // For new resources, check if parent directory exists
-        $parent = dirname($full_path);
-        if (!is_dir($parent)) {
+    $real = realpath($full_path);
+
+    if ($real !== false) {
+        // Path exists — verify it's inside storage
+        $storage_real = realpath($storage);
+        if ($storage_real === false || strpos($real, $storage_real) !== 0) {
             return false;
         }
+        return $real;
     }
-    
-    // Ensure path is within storage directory
+
+    // Path doesn't exist yet (new resource) — verify parent is inside storage
+    $parent = dirname($full_path);
+    $parent_real = realpath($parent);
     $storage_real = realpath($storage);
-    if ($storage_real === false) {
+    if ($parent_real === false || $storage_real === false) {
         return false;
     }
-    
-    // Check if resolved path starts with storage path
-    if (strpos($full_path, $storage_real) !== 0) {
+    if (strpos($parent_real, $storage_real) !== 0) {
         return false;
     }
-    
+
     return $full_path;
 }
 

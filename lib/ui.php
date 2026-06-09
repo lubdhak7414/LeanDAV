@@ -34,8 +34,15 @@ function handle_ui_request(array $config): void {
  * @return void
  */
 function handle_ui_action(array $config, string $action, string $path): void {
+    // Validate path via traversal protection
     $storage = rtrim($config['storage_path'], '/');
-    $full_path = $storage . '/' . ltrim($path, '/');
+    $resolved = resolve_path($path, $config['storage_path']);
+    if ($resolved === false && $action !== 'mkdir') {
+        http_response_code(403);
+        echo 'Forbidden';
+        return;
+    }
+    $full_path = $resolved !== false ? $resolved : $storage . '/' . ltrim($path, '/');
     
     switch ($action) {
         case 'download':
@@ -51,7 +58,8 @@ function handle_ui_action(array $config, string $action, string $path): void {
             
             header('Content-Type: ' . $mime);
             header('Content-Length: ' . $size);
-            header('Content-Disposition: attachment; filename="' . basename($full_path) . '"');
+            $dl_name = rawurlencode(basename($full_path));
+            header("Content-Disposition: attachment; filename*=UTF-8''{$dl_name}");
             header('X-Content-Type-Options: nosniff');
             
             readfile($full_path);
@@ -89,7 +97,6 @@ function handle_ui_action(array $config, string $action, string $path): void {
             if (is_dir($full_path) || substr($full_path, -1) === '/') {
                 $full_path = rtrim($full_path, '/') . '/' . $file['name'];
             }
-
 
             // Ensure target directory exists
             $target_dir = dirname($full_path);
@@ -161,7 +168,7 @@ function handle_ui_action(array $config, string $action, string $path): void {
                 return;
             }
             
-            $new_name = $_POST['new_name'] ?? '';
+            $new_name = basename($_POST['new_name'] ?? '');
             if (empty($new_name)) {
                 http_response_code(400);
                 echo 'New name required';

@@ -23,7 +23,7 @@ function handle_dav_request(array $config): void {
     }
     
     // Log incoming request
-    log_request($method, $uri, 0);
+    log_request($config, $method, $uri, 0);
     
     // Run garbage collection for locks on certain methods
     if (in_array($method, ['PROPFIND', 'OPTIONS', 'LOCK'])) {
@@ -39,7 +39,7 @@ function handle_dav_request(array $config): void {
             handle_propfind($config, $path);
             break;
         case 'PROPPATCH':
-            handle_proppatch($path);
+            handle_proppatch($config, $path);
             break;
         case 'GET':
             handle_get($config, $path);
@@ -233,6 +233,10 @@ function parse_propfind_body(string $body): array {
 function generate_propfind_response(XMLWriter $xml, string $path, string $href, array $requested_props, array $config): void {
     $is_dir = is_dir($path);
     $stat = stat($path);
+    if ($stat === false) {
+        dav_error(500, 'Internal Server Error');
+        return;
+    }
     
     $xml->startElementNS('D', 'response', null);
     
@@ -402,7 +406,7 @@ function scan_directory(string $path, bool $hide_dotfiles): array {
  * @param string $path Resolved filesystem path
  * @return void
  */
-function handle_proppatch(string $path): void {
+function handle_proppatch(array $config, string $path): void {
     // Check if resource exists
     if (!file_exists($path)) {
         dav_error(404, 'Not Found');
@@ -430,11 +434,12 @@ function handle_proppatch(string $path): void {
     $xml_writer->openMemory();
     $xml_writer->startDocument('1.0', 'utf-8');
     $xml_writer->startElementNS('D', 'multistatus', 'DAV:');
+    $xml_writer->writeAttribute('xmlns:Z', 'urn:schemas-microsoft-com:');
     
     $xml_writer->startElementNS('D', 'response', null);
     
     // Href
-    $storage = dirname($path);
+    $storage = $config['storage_path'];
     if ($path === rtrim($storage, '/')) {
         $href = '/';
     } else {
@@ -568,7 +573,6 @@ function handle_head(array $config, string $path): void {
     header('X-Content-Type-Options: nosniff');
     
     http_response_code(200);
-    header('Content-Length: 0');
 }
 
 /**

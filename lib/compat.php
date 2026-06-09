@@ -47,25 +47,3 @@ function compat_filter_files(array $files, bool $hide_dotfiles = true): array {
     
     return $filtered;
 }
-
-/**
- * Apply client-specific compatibility fixes.
- * 
- * @return void
- */
-function apply_compat_fixes(): void {
-    // Windows MiniRedir trailing slash fix
-    if (is_windows_miniredir()) {
-        // Ensure trailing slash on collection URLs
-        $uri = $_SERVER['REQUEST_URI'] ?? '/';
-        if ($uri !== '/' && substr($uri, -1) !== '/') {
-            // Check if this is a directory request
-            $path = resolve_path($uri, dirname(__DIR__) . '/data/');
-            if ($path !== false && is_dir($path)) {
-                header('Location: ' . $uri . '/');
-                http_response_code(301);
-                exit;
-            }
-        }
-    }
-}
