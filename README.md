@@ -1,4 +1,4 @@
-# WebDAV Server
+# LeanDAV (WebDAV) Server
 
 A zero-dependency PHP application implementing the WebDAV protocol (RFC 4918) for native mounting on Windows File Explorer, Linux file managers, and macOS Finder — plus a browser-based management dashboard.
 
