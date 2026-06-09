@@ -248,19 +248,19 @@ function render_dashboard(array $config, string $path): void {
                                 <div class="modified col-modified mono-data"><?php echo date('M d, Y', $meta['mtime']); ?></div>
                                 <div class="actions col-actions">
                                     <?php if (!$is_dir): ?>
-                                        <button type="button" data-action="download" aria-label="Download <?php echo htmlspecialchars($entry); ?>" title="Download">
+                                        <button type="button" data-action="download" onclick="downloadFile('<?php echo htmlspecialchars($entry_url, ENT_QUOTES, 'UTF-8'); ?>')" aria-label="Download <?php echo htmlspecialchars($entry); ?>" title="Download">
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                         </button>
                                     <?php endif; ?>
                                     <?php if ($is_zip): ?>
-                                        <button type="button" data-action="unzip" aria-label="Extract <?php echo htmlspecialchars($entry); ?>" title="Extract archive">
+                                        <button type="button" data-action="unzip" onclick="unzipFile('<?php echo htmlspecialchars($entry_url, ENT_QUOTES, 'UTF-8'); ?>', '<?php echo htmlspecialchars(addslashes($entry), ENT_QUOTES, 'UTF-8'); ?>')" aria-label="Extract <?php echo htmlspecialchars($entry); ?>" title="Extract archive">
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                                         </button>
                                     <?php endif; ?>
-                                    <button type="button" data-action="rename" aria-label="Rename <?php echo htmlspecialchars($entry); ?>" title="Rename">
+                                    <button type="button" data-action="rename" onclick="showRenameModal(<?php echo json_encode($entry, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>, '<?php echo htmlspecialchars($entry_url, ENT_QUOTES, 'UTF-8'); ?>')" aria-label="Rename <?php echo htmlspecialchars($entry); ?>" title="Rename">
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
                                     </button>
-                                    <button type="button" data-action="delete" class="delete" aria-label="Delete <?php echo htmlspecialchars($entry); ?>" title="Delete">
+                                    <button type="button" data-action="delete" class="delete" onclick="deleteItem('<?php echo htmlspecialchars($entry_url, ENT_QUOTES, 'UTF-8'); ?>', <?php echo json_encode($entry, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>)" aria-label="Delete <?php echo htmlspecialchars($entry); ?>" title="Delete">
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                     </button>
                                 </div>

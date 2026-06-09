@@ -991,11 +991,16 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
 ?>
     <script>
     "use strict";
+    // Runtime error logging
     window.__jsErrors = [];
     window.onerror = function(msg, url, line, col, err) {
-        window.__jsErrors.push({msg: msg, line: line, col: col});
+        window.__jsErrors.push({msg: String(msg), line: line, col: col, stack: err && err.stack});
         console.error('[UI Error]', msg, 'at line', line);
     };
+    window.addEventListener('unhandledrejection', function(e) {
+        window.__jsErrors.push({msg: 'Unhandled promise: ' + String(e.reason), type: 'promise'});
+        console.error('[UI Promise Error]', e.reason);
+    });
     (() => {
         // Current path and CSRF token
         const currentPath = <?php echo json_encode($path); ?>;
