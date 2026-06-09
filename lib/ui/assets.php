@@ -991,6 +991,11 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
 ?>
     <script>
     "use strict";
+    window.__jsErrors = [];
+    window.onerror = function(msg, url, line, col, err) {
+        window.__jsErrors.push({msg: msg, line: line, col: col});
+        console.error('[UI Error]', msg, 'at line', line);
+    };
     (() => {
         // Current path and CSRF token
         const currentPath = <?php echo json_encode($path); ?>;
@@ -1005,6 +1010,27 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
         const selectAllCheckbox = document.getElementById('selectAll');
         const bulkActions = document.getElementById('bulkActions');
         const selectedCountEl = document.getElementById('selectedCount');
+
+        // ===== Event Delegation for action buttons =====
+        // Safety net: catches clicks on action buttons via data attributes
+        fileList.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const row = btn.closest('.file-item');
+            if (!row) return;
+            const path = row.getAttribute('data-path');
+            const name = row.getAttribute('data-name');
+            const origName = row.getAttribute('data-origname') || name;
+            const action = btn.getAttribute('data-action');
+            try {
+                if (action === 'download') downloadFile(path);
+                else if (action === 'rename') showRenameModal(origName, path);
+                else if (action === 'delete') deleteItem(path, origName);
+                else if (action === 'unzip') unzipFile(path, origName);
+            } catch (err) { showToast('Action failed: ' + err.message, 'error'); }
+        });
 
         // ===== Upload Zone =====
         uploadZone.addEventListener('click', () => fileInput.click());
@@ -1106,6 +1132,7 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                     progress.setAttribute('aria-valuenow', '0');
                     if (xhr.status >= 200 && xhr.status < 300) {
                         showToast('Uploaded: ' + file.name, 'success');
+                        addFileToList(file.name, file.size);
                     } else {
                         showToast('Upload failed: ' + (xhr.responseText || xhr.statusText), 'error');
                     }
@@ -1129,6 +1156,47 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
             let i = 0;
             while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
             return Math.round(bytes * 10) / 10 + ' ' + units[i];
+        }
+
+        // ===== Add uploaded file to DOM =====
+        function addFileToList(name, size) {
+            // Remove empty state if present
+            const emptyState = document.getElementById('emptyState');
+            if (emptyState) emptyState.remove();
+
+            const entryUrl = currentPath === '/' ? '/' + name : currentPath + '/' + name;
+            const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+            const isZip = ['zip','gz','tar','bz2','7z'].includes(ext);
+
+            const row = document.createElement('div');
+            row.className = 'file-item';
+            row.setAttribute('data-path', entryUrl);
+            row.setAttribute('data-type', 'file');
+            row.setAttribute('data-name', name.toLowerCase());
+            row.setAttribute('data-size', size);
+            row.setAttribute('data-mtime', Math.floor(Date.now() / 1000));
+            row.setAttribute('data-search', name.toLowerCase());
+            row.setAttribute('data-zip', isZip);
+
+            // Build action buttons
+            let actionsHtml = '<button type="button" title="Download" onclick="downloadFile(\'' + entryUrl.replace(/'/g, "\\'") + '\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>';
+            actionsHtml += '<button type="button" title="Rename" onclick="showRenameModal(\'' + name.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\', \'' + entryUrl.replace(/'/g, "\\'") + '\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg></button>';
+            actionsHtml += '<button type="button" class="delete" title="Delete" onclick="deleteItem(\'' + entryUrl.replace(/'/g, "\\'") + '\', \'' + name.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>';
+
+            row.innerHTML =
+                '<label class="checkbox-cell row-cell"><input type="checkbox" class="file-checkbox" value="' + entryUrl.replace(/"/g, '&quot;') + '"></label>' +
+                '<div class="name col-name"><span class="file-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg></span><span class="name-text">' + name + '</span></div>' +
+                '<div class="size col-size mono-data">' + formatBytes(size) + '</div>' +
+                '<div class="modified col-modified mono-data">Just now</div>' +
+                '<div class="actions col-actions">' + actionsHtml + '</div>';
+
+            // Insert at top
+            fileList.insertBefore(row, fileList.firstChild);
+
+            // Re-sort if needed
+            if (currentSort !== 'name' || !sortAsc) {
+                sortByColumn(currentSort);
+            }
         }
 
         // ===== Download =====
