@@ -587,7 +587,11 @@ function handle_put(array $config, string $path): void {
             dav_error(423, 'Locked');
             return;
         }
-        // TODO: Validate lock token in Phase 13
+        // Validate lock token
+        if (!validate_lock_token($path, $if_header)) {
+            dav_error(423, 'Locked');
+            return;
+        }
     }
     
     // Ensure parent directory exists
@@ -668,7 +672,11 @@ function handle_delete(array $config, string $path): void {
             dav_error(423, 'Locked');
             return;
         }
-        // TODO: Validate lock token in Phase 13
+        // Validate lock token
+        if (!validate_lock_token($path, $if_header)) {
+            dav_error(423, 'Locked');
+            return;
+        }
     }
     
     // Recursive delete
