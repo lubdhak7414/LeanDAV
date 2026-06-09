@@ -18,7 +18,7 @@ COPY lib/ /var/www/lib/
 COPY config.example.php /var/www/config.example.php
 
 # Create data directories with proper permissions
-RUN mkdir -p /var/www/data/.locks /var/www/data/.logs && \
+RUN mkdir -p /var/www/data/.locks /var/www/data/.logs /var/www/data/.chunks && \
     chown -R www-data:www-data /var/www/data
 
 # Block PHP execution in data directory
@@ -39,9 +39,17 @@ RUN echo 'RewriteEngine On' > /var/www/html/.htaccess && \
     echo 'RewriteRule ^(.*)$ index.php [QSA,L]' >> /var/www/html/.htaccess && \
     echo 'Options -Indexes' >> /var/www/html/.htaccess && \
     echo 'AddDefaultCharset UTF-8' >> /var/www/html/.htaccess && \
-    echo 'Header always set X-Content-Type-Options "nosniff"' >> /var/www/html/.htaccess
+    echo 'Header always set X-Content-Type-Options "nosniff"' >> /var/www/html/.htaccess && \
+    echo '' >> /var/www/html/.htaccess && \
+    echo '# WebDAV large file upload limits' >> /var/www/html/.htaccess && \
+    echo 'LimitRequestBody 0' >> /var/www/html/.htaccess && \
+    echo 'php_value max_execution_time 3600' >> /var/www/html/.htaccess && \
+    echo 'php_value max_input_time 3600' >> /var/www/html/.htaccess
 
-# Expose port
+# Increase timeout and request size for WebDAV large file uploads
+COPY docker/apache-extra.conf /etc/apache2/conf-available/apache-extra.conf
+RUN a2enconf apache-extra
+
 EXPOSE 80
 
 # Healthcheck

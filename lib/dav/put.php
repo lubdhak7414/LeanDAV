@@ -53,23 +53,12 @@ function handle_put(array $config, string $path): void {
         return;
     }
 
-    // Streaming byte counter
-    $max = $config['max_upload_size'];
+    // Streaming byte counter — no size limit for WebDAV (php://input streams directly)
     $written = 0;
 
     while (!feof($in)) {
         $chunk = fread($in, 8192);
         $written += strlen($chunk);
-
-        if ($written > $max) {
-            fclose($in);
-            fclose($out);
-            unlink($tmpfile);
-            http_response_code(507); // Insufficient Storage
-            header('Content-Length: 0');
-            return;
-        }
-
         fwrite($out, $chunk);
     }
 

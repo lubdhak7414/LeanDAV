@@ -20,3 +20,8 @@ AddDefaultCharset UTF-8
 
 # Security headers
 Header always set X-Content-Type-Options "nosniff"
+
+# WebDAV large file upload limits
+LimitRequestBody 0
+php_value max_execution_time 3600
+php_value max_input_time 3600

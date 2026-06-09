@@ -1023,7 +1023,7 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
         const maxUploadSize = <?php echo (int)$max_upload_size; ?>;
         const csrfToken = <?php echo json_encode($csrf_token); ?>;
         const uploadMaxMb = <?php echo (int)$max_upload_mb; ?>;
-        const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per chunk — small enough to avoid PHP limits
+        const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB per chunk
 
         // ===== DOM refs =====
         const uploadZone = document.getElementById('uploadZone');
@@ -1112,6 +1112,11 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                         body: 'csrf_token=' + encodeURIComponent(csrfToken)
                     });
                     // 201 = created, 409 = already exists — both fine
+                    if (resp.status === 201) {
+                        // New folder created — add it to the current view
+                        addFileToList(rootFolder, 0, 'dir');
+                        updateStats();
+                    }
                     if (resp.status !== 201 && resp.status !== 409) {
                         showToast('Failed to create folder: ' + rootFolder, 'error');
                         return;
@@ -1138,10 +1143,7 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
 
             // Queue all files with their sub-directories
             for (const entry of entries) {
-                if (entry.file.size > maxUploadSize) {
-                    showToast('File too large: ' + entry.file.name + ' (' + formatBytes(entry.file.size) + ' > ' + formatBytes(maxUploadSize) + ')', 'error');
-                    continue;
-                }
+
                 // Ensure subdirectory exists
                 const dirParts = entry.subPath.split('/');
                 dirParts.pop(); // remove filename
@@ -1175,10 +1177,6 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
 
         async function handleFiles(files) {
             for (const file of files) {
-                if (file.size > maxUploadSize) {
-                    showToast('File too large: ' + file.name + ' (' + formatBytes(file.size) + ' > ' + formatBytes(maxUploadSize) + ')', 'error');
-                    continue;
-                }
                 uploadQueue.push({ file, uploadDir: currentPath });
             }
             if (!uploading) {
@@ -1238,7 +1236,7 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                         progress.setAttribute('aria-valuenow', '0');
                         if (xhr.status >= 200 && xhr.status < 300) {
                             showToast('Uploaded: ' + file.name, 'success');
-                            addFileToList(file.name, file.size);
+                            if (uploadDir === currentPath) addFileToList(file.name, file.size);
                             updateStats();
                         } else {
                             showToast('Upload failed: ' + (xhr.responseText || xhr.statusText), 'error');
@@ -1319,7 +1317,7 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
             progress.classList.remove('active');
             progress.setAttribute('aria-valuenow', '0');
             showToast('Uploaded: ' + file.name, 'success');
-            addFileToList(file.name, file.size);
+            if (uploadDir === currentPath) addFileToList(file.name, file.size);
             updateStats();
         }
 
@@ -1351,37 +1349,50 @@ function formatBytes(bytes) {
             if (totalEl) totalEl.textContent = formatBytes(totalSize);
         }
 
-        // ===== Add uploaded file to DOM =====
-        function addFileToList(name, size) {
+        // ===== Add uploaded file/folder to DOM =====
+        function addFileToList(name, size, type) {
             // Remove empty state if present
             const emptyState = document.getElementById('emptyState');
             if (emptyState) emptyState.remove();
 
+            const isDir = type === 'dir';
             const entryUrl = currentPath === '/' ? '/' + name : currentPath + '/' + name;
-            const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
-            const isZip = ['zip','gz','tar','bz2','7z'].includes(ext);
 
             const row = document.createElement('div');
             row.className = 'file-item';
             row.setAttribute('data-path', entryUrl);
-            row.setAttribute('data-type', 'file');
+            row.setAttribute('data-type', type || 'file');
             row.setAttribute('data-name', name.toLowerCase());
             row.setAttribute('data-size', size);
             row.setAttribute('data-mtime', Math.floor(Date.now() / 1000));
             row.setAttribute('data-search', name.toLowerCase());
-            row.setAttribute('data-zip', isZip);
 
-            // Build action buttons
-            let actionsHtml = '<button type="button" title="Download" onclick="downloadFile(\'' + entryUrl.replace(/'/g, "\\'") + '\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>';
-            actionsHtml += '<button type="button" title="Rename" onclick="showRenameModal(\'' + name.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\', \'' + entryUrl.replace(/'/g, "\\'") + '\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg></button>';
-            actionsHtml += '<button type="button" class="delete" title="Delete" onclick="deleteItem(\'' + entryUrl.replace(/'/g, "\\'") + '\', \'' + name.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>';
+            if (isDir) {
+                // Folder row
+                row.setAttribute('data-zip', 'false');
+                row.innerHTML =
+                    '<label class="checkbox-cell row-cell"><input type="checkbox" class="file-checkbox" value="' + entryUrl.replace(/"/g, '&quot;') + '"></label>' +
+                    '<div class="name col-name"><span class="file-icon dir-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span><a href="?path=' + encodeURIComponent(entryUrl) + '">' + name + '</a></div>' +
+                    '<div class="size col-size mono-data">—</div>' +
+                    '<div class="modified col-modified mono-data">Just now</div>' +
+                    '<div class="actions col-actions"></div>';
+            } else {
+                // File row
+                const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+                const isZip = ['zip','gz','tar','bz2','7z'].includes(ext);
+                row.setAttribute('data-zip', isZip);
 
-            row.innerHTML =
-                '<label class="checkbox-cell row-cell"><input type="checkbox" class="file-checkbox" value="' + entryUrl.replace(/"/g, '&quot;') + '"></label>' +
-                '<div class="name col-name"><span class="file-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg></span><span class="name-text">' + name + '</span></div>' +
-                '<div class="size col-size mono-data">' + formatBytes(size) + '</div>' +
-                '<div class="modified col-modified mono-data">Just now</div>' +
-                '<div class="actions col-actions">' + actionsHtml + '</div>';
+                let actionsHtml = '<button type="button" title="Download" onclick="downloadFile(\'' + entryUrl.replace(/'/g, "\\'") + '\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>';
+                actionsHtml += '<button type="button" title="Rename" onclick="showRenameModal(\'' + name.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\', \'' + entryUrl.replace(/'/g, "\\'") + '\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg></button>';
+                actionsHtml += '<button type="button" class="delete" title="Delete" onclick="deleteItem(\'' + entryUrl.replace(/'/g, "\\'") + '\', \'' + name.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + '\')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>';
+
+                row.innerHTML =
+                    '<label class="checkbox-cell row-cell"><input type="checkbox" class="file-checkbox" value="' + entryUrl.replace(/"/g, '&quot;') + '"></label>' +
+                    '<div class="name col-name"><span class="file-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg></span><span class="name-text">' + name + '</span></div>' +
+                    '<div class="size col-size mono-data">' + formatBytes(size) + '</div>' +
+                    '<div class="modified col-modified mono-data">Just now</div>' +
+                    '<div class="actions col-actions">' + actionsHtml + '</div>';
+            }
 
             // Insert at top
             fileList.insertBefore(row, fileList.firstChild);

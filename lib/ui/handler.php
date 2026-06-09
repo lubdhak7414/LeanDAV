@@ -236,6 +236,23 @@ function handle_chunk_upload_action(string $full_path, string $path, array $conf
         return;
     }
 
+
+    // Cleanup abandoned chunks older than 1 hour
+    $chunks_base = $config['storage_path'] . '/.chunks';
+    if (is_dir($chunks_base)) {
+        $now = time();
+        foreach (scandir($chunks_base) as $entry) {
+            if ($entry === '.' || $entry === '..') continue;
+            $dir = $chunks_base . '/' . $entry;
+            if (is_dir($dir) && ($now - filemtime($dir)) > 3600) {
+                foreach (scandir($dir) as $f) {
+                    if ($f !== '.' && $f !== '..') unlink($dir . '/' . $f);
+                }
+                rmdir($dir);
+            }
+        }
+    }
+
     $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     if (!ui_csrf_validate($token)) {
         http_response_code(403);
@@ -263,12 +280,7 @@ function handle_chunk_upload_action(string $full_path, string $path, array $conf
         return;
     }
 
-    // Enforce total file size limit
-    if ($total_size > $config['max_upload_size']) {
-        http_response_code(413);
-        echo 'File too large';
-        return;
-    }
+
 
     // Resolve target path
     if (is_dir($full_path) || substr($full_path, -1) === '/') {
