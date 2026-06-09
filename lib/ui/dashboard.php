@@ -130,12 +130,18 @@ function render_dashboard(array $config, string $path): void {
                 </div>
 
                 <input type="file" id="fileInput" multiple>
+                <input type="file" id="folderInput" webkitdirectory multiple>
 
                 <div class="sidebar-buttons">
                     <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                         Upload Files
                     </button>
+                    <button type="button" class="btn btn-primary" onclick="document.getElementById('folderInput').click()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><path d="M12 11v6"></path><path d="M9 14l3-3 3 3"></path></svg>
+                        Upload Folder
+                    </button>
+
                     <button type="button" class="btn btn-secondary" onclick="showNewFolderModal()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
                         New Folder
@@ -258,7 +264,7 @@ function render_dashboard(array $config, string $path): void {
                                     <?php endif; ?>
                                     <?php if ($is_zip): ?>
                                         <button type="button" data-action="unzip" onclick="unzipFile('<?php echo htmlspecialchars($entry_url, ENT_QUOTES, 'UTF-8'); ?>', '<?php echo htmlspecialchars(addslashes($entry), ENT_QUOTES, 'UTF-8'); ?>')" aria-label="Extract <?php echo htmlspecialchars($entry); ?>" title="Extract archive">
-<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M12 8v8"></path><path d="M8 12l4 4 4-4"></path></svg>
+                                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><path d="M12 10v6"></path><path d="M9 13l3 3 3-3"></path></svg>
                                         </button>
                                     <?php endif; ?>
                                     <button type="button" data-action="rename" onclick="showRenameModal(<?php echo json_encode($entry, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>, '<?php echo htmlspecialchars($entry_url, ENT_QUOTES, 'UTF-8'); ?>')" aria-label="Rename <?php echo htmlspecialchars($entry); ?>" title="Rename">

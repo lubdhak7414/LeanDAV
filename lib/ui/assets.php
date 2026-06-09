@@ -257,9 +257,11 @@ function output_ui_css(): void {
             margin-top: 6px;
         }
 
-        #fileInput {
+        #fileInput, #folderInput {
             display: none;
         }
+
+
 
         .sidebar-buttons {
             display: flex;
@@ -978,6 +980,9 @@ function output_ui_css(): void {
 
             .sidebar-buttons {
                 flex-direction: row;
+                flex-wrap: wrap;
+                gap: 6px;
+
             }
 
             .sidebar-buttons .btn {
@@ -1018,10 +1023,12 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
         const maxUploadSize = <?php echo (int)$max_upload_size; ?>;
         const csrfToken = <?php echo json_encode($csrf_token); ?>;
         const uploadMaxMb = <?php echo (int)$max_upload_mb; ?>;
+        const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per chunk — small enough to avoid PHP limits
 
         // ===== DOM refs =====
         const uploadZone = document.getElementById('uploadZone');
         const fileInput = document.getElementById('fileInput');
+        const folderInput = document.getElementById('folderInput');
         const fileList = document.getElementById('fileList');
         const selectAllCheckbox = document.getElementById('selectAll');
         const bulkActions = document.getElementById('bulkActions');
@@ -1084,6 +1091,83 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
             fileInput.value = '';
         });
 
+        folderInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            folderInput.value = '';
+            if (files.length === 0) return;
+
+            // Extract root folder name from webkitRelativePath
+            // e.g. "myfolder/sub/file.txt" → root = "myfolder"
+            const firstPath = files[0].webkitRelativePath || '';
+            const rootFolder = firstPath.split('/')[0] || '';
+
+            if (rootFolder) {
+                // Create the root folder on the server first
+                try {
+                    const resp = await fetch('?action=mkdir&path=' + encodeURIComponent(
+                        currentPath === '/' ? '/' + rootFolder : currentPath + '/' + rootFolder
+                    ), {
+                        method: 'POST',
+                        headers: { 'X-CSRF-Token': csrfToken },
+                        body: 'csrf_token=' + encodeURIComponent(csrfToken)
+                    });
+                    // 201 = created, 409 = already exists — both fine
+                    if (resp.status !== 201 && resp.status !== 409) {
+                        showToast('Failed to create folder: ' + rootFolder, 'error');
+                        return;
+                    }
+                } catch (err) {
+                    showToast('Failed to create folder: ' + err.message, 'error');
+                    return;
+                }
+            }
+
+            // Build upload entries with subpaths
+            const entries = files.map(file => {
+                const relPath = file.webkitRelativePath || file.name;
+                // "myfolder/sub/dir/file.txt" → "sub/dir/file.txt"
+                const parts = relPath.split('/');
+                parts.shift(); // remove root folder name
+                const subPath = parts.join('/');
+                // Upload target: currentPath/rootFolder/sub/path
+                const uploadDir = rootFolder
+                    ? (currentPath === '/' ? '/' + rootFolder : currentPath + '/' + rootFolder)
+                    : currentPath;
+                return { file, subPath, uploadDir };
+            });
+
+            // Queue all files with their sub-directories
+            for (const entry of entries) {
+                if (entry.file.size > maxUploadSize) {
+                    showToast('File too large: ' + entry.file.name + ' (' + formatBytes(entry.file.size) + ' > ' + formatBytes(maxUploadSize) + ')', 'error');
+                    continue;
+                }
+                // Ensure subdirectory exists
+                const dirParts = entry.subPath.split('/');
+                dirParts.pop(); // remove filename
+                if (dirParts.length > 0) {
+                    const subDir = dirParts.join('/');
+                    const fullSubDir = entry.uploadDir === '/'
+                        ? '/' + subDir
+                        : entry.uploadDir + '/' + subDir;
+                    try {
+                        await fetch('?action=mkdir&path=' + encodeURIComponent(fullSubDir), {
+                            method: 'POST',
+                            headers: { 'X-CSRF-Token': csrfToken },
+                            body: 'csrf_token=' + encodeURIComponent(csrfToken)
+                        });
+                    } catch (_) {} // ignore errors (may already exist)
+                }
+                uploadQueue.push({ file: entry.file, uploadDir: entry.uploadDir });
+            }
+
+            if (!uploading) {
+                processUploadQueue();
+            }
+        });
+
+
+
         // ===== File Upload with Real Progress =====
         let uploadQueue = [];
         let uploadIndex = 0;
@@ -1095,12 +1179,13 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                     showToast('File too large: ' + file.name + ' (' + formatBytes(file.size) + ' > ' + formatBytes(maxUploadSize) + ')', 'error');
                     continue;
                 }
-                uploadQueue.push(file);
+                uploadQueue.push({ file, uploadDir: currentPath });
             }
             if (!uploading) {
                 processUploadQueue();
             }
         }
+
 
         async function processUploadQueue() {
             if (uploadIndex >= uploadQueue.length) {
@@ -1112,60 +1197,130 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
 
             uploading = true;
             const total = uploadQueue.length;
-            const file = uploadQueue[uploadIndex];
+            const entry = uploadQueue[uploadIndex];
             uploadIndex++;
 
-            await uploadFile(file, uploadIndex, total);
+            await uploadFile(entry.file, entry.uploadDir, uploadIndex, total);
+
             await processUploadQueue();
         }
 
-        function uploadFile(file, current, total) {
-            return new Promise((resolve) => {
-                const progress = document.getElementById('progress');
-                const progressFill = document.getElementById('progressFill');
-                const progressText = document.getElementById('progressText');
+        async function uploadFile(file, uploadDir, current, total) {
+            const progress = document.getElementById('progress');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
 
-                progress.classList.add('active');
-                progressText.textContent = 'Uploading ' + current + ' of ' + total + ': ' + file.name;
-                progressFill.style.width = '0%';
+            progress.classList.add('active');
+            progressText.textContent = 'Uploading ' + current + ' of ' + total + ': ' + file.name;
+            progressFill.style.width = '0%';
 
-                const xhr = new XMLHttpRequest();
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('csrf_token', csrfToken);
+            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable) {
-                        const pct = Math.round((e.loaded / e.total) * 100);
-                        progressFill.style.width = pct + '%';
-                        progress.setAttribute('aria-valuenow', pct);
-                        progressText.textContent = 'Uploading ' + current + ' of ' + total + ': ' + file.name + ' (' + pct + '%)';
-                    }
+            // Small file — single request (fast path, avoids session timeout)
+            if (file.size <= CHUNK_SIZE) {
+                await new Promise((resolve) => {
+                    const xhr = new XMLHttpRequest();
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    fd.append('csrf_token', csrfToken);
+
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable) {
+                            const pct = Math.round((e.loaded / e.total) * 100);
+                            progressFill.style.width = pct + '%';
+                            progress.setAttribute('aria-valuenow', pct);
+                            progressText.textContent = 'Uploading ' + current + ' of ' + total + ': ' + file.name + ' (' + pct + '%)';
+                        }
+                    });
+
+                    xhr.addEventListener('load', () => {
+                        progress.classList.remove('active');
+                        progress.setAttribute('aria-valuenow', '0');
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            showToast('Uploaded: ' + file.name, 'success');
+                            addFileToList(file.name, file.size);
+                            updateStats();
+                        } else {
+                            showToast('Upload failed: ' + (xhr.responseText || xhr.statusText), 'error');
+                        }
+                        resolve();
+                    });
+
+                    xhr.addEventListener('error', () => {
+                        progress.classList.remove('active');
+                        progress.setAttribute('aria-valuenow', '0');
+                        showToast('Upload error for: ' + file.name, 'error');
+                        resolve();
+                    });
+
+                    xhr.open('POST', '?action=upload&path=' + encodeURIComponent(uploadDir));
+                    xhr.send(fd);
+                });
+                return;
+            }
+
+            // Large file — chunked upload
+            for (let i = 0; i < totalChunks; i++) {
+                const start = i * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, file.size);
+                const chunk = file.slice(start, end);
+
+                const pct = Math.round(((i) / totalChunks) * 100);
+                progressFill.style.width = pct + '%';
+                progress.setAttribute('aria-valuenow', pct);
+                progressText.textContent = 'Uploading ' + current + ' of ' + total + ': ' + file.name + ' (chunk ' + (i + 1) + '/' + totalChunks + ', ' + pct + '%)';
+
+                const ok = await new Promise((resolve) => {
+                    const xhr = new XMLHttpRequest();
+                    const fd = new FormData();
+                    fd.append('chunk', chunk, file.name);
+                    fd.append('file_name', file.name);
+                    fd.append('chunk_index', i);
+                    fd.append('total_chunks', totalChunks);
+                    fd.append('total_size', file.size);
+                    fd.append('csrf_token', csrfToken);
+
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable) {
+                            const overallPct = Math.round(((i + e.loaded / e.total) / totalChunks) * 100);
+                            progressFill.style.width = overallPct + '%';
+                            progress.setAttribute('aria-valuenow', overallPct);
+                            progressText.textContent = 'Uploading ' + current + ' of ' + total + ': ' + file.name + ' (chunk ' + (i + 1) + '/' + totalChunks + ', ' + overallPct + '%)';
+                        }
+                    });
+
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(true);
+                        } else {
+                            showToast('Upload failed (chunk ' + (i + 1) + '): ' + (xhr.responseText || xhr.statusText), 'error');
+                            resolve(false);
+                        }
+                    });
+
+                    xhr.addEventListener('error', () => {
+                        showToast('Upload error: ' + file.name + ' (chunk ' + (i + 1) + ')', 'error');
+                        resolve(false);
+                    });
+
+                    xhr.open('POST', '?action=chunk-upload&path=' + encodeURIComponent(uploadDir));
+                    xhr.send(fd);
                 });
 
-                xhr.addEventListener('load', () => {
+                if (!ok) {
                     progress.classList.remove('active');
                     progress.setAttribute('aria-valuenow', '0');
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        showToast('Uploaded: ' + file.name, 'success');
-                        addFileToList(file.name, file.size);
-                        updateStats();
-                    } else {
-                        showToast('Upload failed: ' + (xhr.responseText || xhr.statusText), 'error');
-                    }
-                    resolve();
-                });
+                    return;
+                }
+            }
 
-                xhr.addEventListener('error', () => {
-                    progress.classList.remove('active');
-                    progress.setAttribute('aria-valuenow', '0');
-                    showToast('Upload error for: ' + file.name, 'error');
-                    resolve();
-                });
-
-                xhr.open('POST', '?action=upload&path=' + encodeURIComponent(currentPath));
-                xhr.send(formData);
-            });
+            // All chunks uploaded
+            progressFill.style.width = '100%';
+            progress.classList.remove('active');
+            progress.setAttribute('aria-valuenow', '0');
+            showToast('Uploaded: ' + file.name, 'success');
+            addFileToList(file.name, file.size);
+            updateStats();
         }
 
 function formatBytes(bytes) {

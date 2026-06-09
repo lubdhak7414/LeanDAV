@@ -34,8 +34,18 @@ function handle_ui_request(array $config): void {
  * @return void
  */
 function handle_ui_action(array $config, string $action, string $path): void {
+    // Detect post_max_size overflow: PHP discards ALL $_POST data when the
+    // request body exceeds post_max_size, so csrf_token disappears and CSRF
+    // validation fails with a misleading error. Detect this early.
+    if ($action === 'upload' && empty($_POST) && !empty($_FILES)) {
+        $post_max = ini_get('post_max_size');
+        http_response_code(413);
+        echo 'Upload failed: file exceeds server limit (' . $post_max . ' max). Increase post_max_size and upload_max_filesize in php.ini.';
+        return;
+    }
+
     // CSRF protection for all mutating actions
-    if (in_array($action, ['upload', 'mkdir', 'delete', 'rename', 'zip-download', 'unzip'])) {
+    if (in_array($action, ['upload', 'chunk-upload', 'mkdir', 'delete', 'rename', 'zip-download', 'unzip'])) {
         $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
         if (!ui_csrf_validate($token)) {
             http_response_code(403);
@@ -71,6 +81,9 @@ function handle_ui_action(array $config, string $action, string $path): void {
             break;
         case 'upload':
             handle_upload_action($full_path, $path, $config);
+            break;
+        case 'chunk-upload':
+            handle_chunk_upload_action($full_path, $path, $config);
             break;
         case 'mkdir':
             handle_mkdir_action($full_path, $path, $config);
@@ -165,8 +178,14 @@ function handle_upload_action(string $full_path, string $path, array $config): v
 
     $file = $_FILES['file'];
     if ($file['error'] !== UPLOAD_ERR_OK) {
-        http_response_code(500);
-        echo upload_error_message($file['error']);
+        // Use 413 for size-related errors, 400 for others
+        $is_size_error = in_array($file['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE]);
+        http_response_code($is_size_error ? 413 : 400);
+        $msg = upload_error_message($file['error']);
+        if ($is_size_error) {
+            $msg .= ' (php.ini: upload_max_filesize=' . ini_get('upload_max_filesize') . ', post_max_size=' . ini_get('post_max_size') . ')';
+        }
+        echo $msg;
         return;
     }
 
@@ -204,6 +223,132 @@ function handle_upload_action(string $full_path, string $path, array $config): v
         http_response_code(500);
         echo 'Failed to move uploaded file';
     }
+}
+
+/**
+ * Handle chunked file upload. Receives individual chunks and assembles
+ * them into the final file, bypassing PHP upload size limits entirely.
+ */
+function handle_chunk_upload_action(string $full_path, string $path, array $config): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo 'Method not allowed';
+        return;
+    }
+
+    $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!ui_csrf_validate($token)) {
+        http_response_code(403);
+        echo 'Invalid CSRF token';
+        return;
+    }
+
+    // Required fields: file name, chunk index, total chunks, total size
+    $file_name  = $_POST['file_name'] ?? '';
+    $chunk_idx  = isset($_POST['chunk_index']) ? (int) $_POST['chunk_index'] : -1;
+    $total_chunks = isset($_POST['total_chunks']) ? (int) $_POST['total_chunks'] : 0;
+    $total_size = isset($_POST['total_size']) ? (int) $_POST['total_size'] : 0;
+
+    if ($file_name === '' || $chunk_idx < 0 || $total_chunks < 1 || $total_size < 1) {
+        http_response_code(400);
+        echo 'Missing chunk parameters';
+        return;
+    }
+
+    // Validate and sanitize filename
+    $safe_name = sanitize_name($file_name);
+    if ($safe_name === false || $safe_name === '') {
+        http_response_code(400);
+        echo 'Invalid filename';
+        return;
+    }
+
+    // Enforce total file size limit
+    if ($total_size > $config['max_upload_size']) {
+        http_response_code(413);
+        echo 'File too large';
+        return;
+    }
+
+    // Resolve target path
+    if (is_dir($full_path) || substr($full_path, -1) === '/') {
+        $full_path = rtrim($full_path, '/') . '/' . $safe_name;
+    }
+
+    // Use a temp directory for chunks: data/.chunks/<upload_id>/
+    $upload_id = preg_replace('/[^a-zA-Z0-9_-]/', '', $file_name . '_' . $total_size);
+    $chunk_dir = $config['storage_path'] . '/.chunks/' . $upload_id;
+
+    if (!is_dir($chunk_dir)) {
+        mkdir($chunk_dir, 0755, true);
+    }
+
+    // Save chunk
+    if (!isset($_FILES['chunk']) || $_FILES['chunk']['error'] !== UPLOAD_ERR_OK) {
+        http_response_code(400);
+        echo 'Chunk upload failed';
+        return;
+    }
+
+    $chunk_path = $chunk_dir . '/' . $chunk_idx;
+    if (!move_uploaded_file($_FILES['chunk']['tmp_name'], $chunk_path)) {
+        http_response_code(500);
+        echo 'Failed to save chunk';
+        return;
+    }
+
+    // Check if all chunks have arrived
+    $saved_chunks = 0;
+    for ($i = 0; $i < $total_chunks; $i++) {
+        if (file_exists($chunk_dir . '/' . $i)) {
+            $saved_chunks++;
+        }
+    }
+
+    if ($saved_chunks < $total_chunks) {
+        // More chunks expected
+        http_response_code(206);
+        echo json_encode(['status' => 'chunk', 'received' => $saved_chunks, 'total' => $total_chunks]);
+        return;
+    }
+
+    // All chunks received — assemble final file
+    $target_dir = dirname($full_path);
+    if (!is_dir($target_dir)) {
+        mkdir($target_dir, 0755, true);
+    }
+
+    $final = @fopen($full_path, 'wb');
+    if (!$final) {
+        http_response_code(500);
+        echo 'Failed to create final file';
+        return;
+    }
+
+    for ($i = 0; $i < $total_chunks; $i++) {
+        $cpath = $chunk_dir . '/' . $i;
+        $cf = @fopen($cpath, 'rb');
+        if (!$cf) {
+            fclose($final);
+            http_response_code(500);
+            echo 'Failed to read chunk ' . $i;
+            return;
+        }
+        while (!feof($cf)) {
+            fwrite($final, fread($cf, 8192));
+        }
+        fclose($cf);
+        unlink($cpath); // clean up chunk
+    }
+
+    fclose($final);
+
+    // Remove chunk directory
+    rmdir($chunk_dir);
+
+    log_request($config, 'UPLOAD', $path . '/' . $safe_name, 201);
+    http_response_code(201);
+    echo json_encode(['status' => 'complete', 'name' => $safe_name]);
 }
 
 /**

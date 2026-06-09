@@ -24,6 +24,12 @@ RUN mkdir -p /var/www/data/.locks /var/www/data/.logs && \
 # Block PHP execution in data directory
 RUN echo 'Deny from all' > /var/www/data/.htaccess
 
+# Increase PHP upload limits for large files
+RUN echo 'upload_max_filesize = 2G' > /usr/local/etc/php/conf.d/uploads.ini && \
+    echo 'post_max_size = 2G' >> /usr/local/etc/php/conf.d/uploads.ini && \
+    echo 'max_execution_time = 3600' >> /usr/local/etc/php/conf.d/uploads.ini && \
+    echo 'max_input_time = 3600' >> /usr/local/etc/php/conf.d/uploads.ini
+
 # Override .htaccess for Docker (no HTTPS redirect inside container)
 # HTTPS should be handled by reverse proxy (nginx, traefik, etc.)
 RUN echo 'RewriteEngine On' > /var/www/html/.htaccess && \
