@@ -57,6 +57,8 @@ $is_ui_action = (
 );
 
 if ($is_browser || $is_ui_action) {
+    // Require auth for browser UI too
+    require_auth($config);
     // Handle management UI
     handle_ui_request($config);
 } else {

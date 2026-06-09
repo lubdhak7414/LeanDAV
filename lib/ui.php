@@ -85,12 +85,18 @@ function handle_ui_action(array $config, string $action, string $path): void {
                 return;
             }
             
+            // Append filename to path
+            if (is_dir($full_path) || substr($full_path, -1) === '/') {
+                $full_path = rtrim($full_path, '/') . '/' . $file['name'];
+            }
+
+
             // Ensure target directory exists
             $target_dir = dirname($full_path);
             if (!is_dir($target_dir)) {
                 mkdir($target_dir, 0755, true);
             }
-            
+
             // Move uploaded file
             if (move_uploaded_file($file['tmp_name'], $full_path)) {
                 http_response_code(201);
