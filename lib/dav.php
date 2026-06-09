@@ -249,7 +249,7 @@ function generate_propfind_response(XMLWriter $xml, string $path, string $href, 
     $all_props = ($requested_props === ['allprop'] || $requested_props === ['propname']);
     
     // Resource type
-    if ($all_props || $this->has_prop($requested_props, 'resourcetype')) {
+    if ($all_props || has_prop($requested_props, 'resourcetype')) {
         $xml->startElementNS('D', 'resourcetype', null);
         if ($is_dir) {
             $xml->startElementNS('D', 'collection', null);
@@ -259,7 +259,7 @@ function generate_propfind_response(XMLWriter $xml, string $path, string $href, 
     }
     
     // Display name
-    if ($all_props || $this->has_prop($requested_props, 'displayname')) {
+    if ($all_props || has_prop($requested_props, 'displayname')) {
         $name = basename($path);
         if ($path === rtrim($config['storage_path'], '/')) {
             $name = '/';
@@ -270,28 +270,28 @@ function generate_propfind_response(XMLWriter $xml, string $path, string $href, 
     }
     
     // Content length (files only)
-    if (!$is_dir && ($all_props || $this->has_prop($requested_props, 'getcontentlength'))) {
+    if (!$is_dir && ($all_props || has_prop($requested_props, 'getcontentlength'))) {
         $xml->startElementNS('D', 'getcontentlength', null);
         $xml->text($stat['size']);
         $xml->endElement();
     }
     
     // Last modified
-    if ($all_props || $this->has_prop($requested_props, 'getlastmodified')) {
+    if ($all_props || has_prop($requested_props, 'getlastmodified')) {
         $xml->startElementNS('D', 'getlastmodified', null);
         $xml->text(gmdate('D, d M Y H:i:s', $stat['mtime']) . ' GMT');
         $xml->endElement();
     }
     
     // Creation date
-    if ($all_props || $this->has_prop($requested_props, 'creationdate')) {
+    if ($all_props || has_prop($requested_props, 'creationdate')) {
         $xml->startElementNS('D', 'creationdate', null);
         $xml->text(gmdate('Y-m-d\TH:i:s\Z', $stat['ctime']));
         $xml->endElement();
     }
     
     // Content type (files only)
-    if (!$is_dir && ($all_props || $this->has_prop($requested_props, 'getcontenttype'))) {
+    if (!$is_dir && ($all_props || has_prop($requested_props, 'getcontenttype'))) {
         $mime = detect_mime($path);
         $xml->startElementNS('D', 'getcontenttype', null);
         $xml->text($mime);
@@ -299,7 +299,7 @@ function generate_propfind_response(XMLWriter $xml, string $path, string $href, 
     }
     
     // ETag
-    if ($all_props || $this->has_prop($requested_props, 'getetag')) {
+    if ($all_props || has_prop($requested_props, 'getetag')) {
         $etag = sprintf('"%x-%x"', $stat['mtime'], $stat['size']);
         $xml->startElementNS('D', 'getetag', null);
         $xml->text($etag);
@@ -307,7 +307,7 @@ function generate_propfind_response(XMLWriter $xml, string $path, string $href, 
     }
     
     // Supported lock
-    if ($all_props || $this->has_prop($requested_props, 'supportedlock')) {
+    if ($all_props || has_prop($requested_props, 'supportedlock')) {
         $xml->startElementNS('D', 'supportedlock', null);
         $xml->startElementNS('D', 'lockentry', null);
         $xml->startElementNS('D', 'lockscope', null);
@@ -323,7 +323,7 @@ function generate_propfind_response(XMLWriter $xml, string $path, string $href, 
     }
     
     // Lock discovery
-    if ($all_props || $this->has_prop($requested_props, 'lockdiscovery')) {
+    if ($all_props || has_prop($requested_props, 'lockdiscovery')) {
         $xml->startElementNS('D', 'lockdiscovery', null);
         // Lock info will be added here if resource is locked
         $xml->endElement();
@@ -372,6 +372,11 @@ function scan_directory(string $path, bool $hide_dotfiles): array {
             return $entry[0] !== '.';
         });
     }
+    
+    // Filter .part.* temp files (incomplete uploads)
+    $entries = array_filter($entries, function ($entry) {
+        return !preg_match('/\\.part\\.[a-f0-9.]+$/', $entry);
+    });
     
     // Sort: directories first, then files, alphabetically
     usort($entries, function ($a, $b) use ($path) {
