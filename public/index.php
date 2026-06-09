@@ -74,7 +74,7 @@ $is_browser = (
 // Check if this is a UI action (management operations)
 $is_ui_action = (
     isset($_GET['action']) &&
-    in_array($_GET['action'], ['download', 'upload', 'mkdir', 'delete', 'rename'])
+    in_array($_GET['action'], ['download', 'upload', 'mkdir', 'delete', 'rename', 'logout', 'zip-download', 'unzip'])
 );
 
 if ($is_browser || $is_ui_action) {

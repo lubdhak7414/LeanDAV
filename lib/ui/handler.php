@@ -87,6 +87,9 @@ function handle_ui_action(array $config, string $action, string $path): void {
         case 'unzip':
             handle_unzip_action($full_path, $path, $config);
             break;
+        case 'logout':
+            handle_logout_action();
+            break;
         default:
             http_response_code(400);
             echo 'Unknown action';
@@ -492,4 +495,23 @@ function handle_unzip_action(string $full_path, string $path, array $config): vo
     log_request($config, 'UNZIP', $path, 200);
     http_response_code(200);
     echo 'Archive extracted successfully';
+}
+
+/**
+ * Handle logout — clear HTTP Basic Auth session.
+ *
+ * Sends a 401 response with WWW-Authenticate header which prompts the browser
+ * to clear cached credentials and show the login dialog.
+ *
+ * @return void
+ */
+function handle_logout_action(): void {
+    http_response_code(401);
+    header('WWW-Authenticate: Basic realm="WebDAV Server", charset="UTF-8"');
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!DOCTYPE html><html><head><title>Logged Out</title></head><body>';
+    echo '<h2>You have been logged out.</h2>';
+    echo '<p><a href="/">Back to file manager</a></p>';
+    echo '</body></html>';
+    exit;
 }
