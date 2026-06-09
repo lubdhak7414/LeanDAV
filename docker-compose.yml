@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+  webdav:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./data:/var/www/data
+      - ./config.php:/var/www/config.php
+      - ./logs:/var/www/data/.logs
+    restart: unless-stopped
