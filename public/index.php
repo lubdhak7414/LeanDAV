@@ -19,6 +19,12 @@ if (!file_exists($config_path)) {
 }
 $config = require $config_path;
 
+// Security headers
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('X-XSS-Protection: 1; mode=block');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+
 // Load required libraries
 require_once dirname(__DIR__) . '/lib/util.php';
 require_once dirname(__DIR__) . '/lib/auth.php';
