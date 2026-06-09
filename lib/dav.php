@@ -580,7 +580,7 @@ function handle_head(array $config, string $path): void {
  */
 function handle_put(array $config, string $path): void {
     // Check if resource is locked
-    if (is_locked($path)) {
+    if (is_locked($path, $config['lock_dir'])) {
         // Check for valid If header
         $if_header = $_SERVER['HTTP_IF'] ?? '';
         if (empty($if_header)) {
@@ -661,7 +661,7 @@ function handle_delete(array $config, string $path): void {
     }
     
     // Check if resource is locked
-    if (is_locked($path)) {
+    if (is_locked($path, $config['lock_dir'])) {
         // Check for valid If header
         $if_header = $_SERVER['HTTP_IF'] ?? '';
         if (empty($if_header)) {
@@ -771,7 +771,7 @@ function handle_move(array $config, string $path): void {
     }
     
     // Check if source is locked
-    if (is_locked($path)) {
+    if (is_locked($path, $config['lock_dir'])) {
         $if_header = $_SERVER['HTTP_IF'] ?? '';
         if (empty($if_header)) {
             dav_error(423, 'Locked');
@@ -780,7 +780,7 @@ function handle_move(array $config, string $path): void {
     }
     
     // Check if destination is locked
-    if (is_locked($dest_path)) {
+    if (is_locked($dest_path, $config['lock_dir'])) {
         $if_header = $_SERVER['HTTP_IF'] ?? '';
         if (empty($if_header)) {
             dav_error(423, 'Locked');

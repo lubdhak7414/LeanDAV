@@ -211,8 +211,10 @@ function handle_unlock(array $config, string $path): void {
  * @param string $path Resource path
  * @return bool True if locked
  */
-function is_locked(string $path): bool {
-    $lock_dir = dirname(__DIR__) . '/data/.locks/';
+function is_locked(string $path, string $lock_dir = ''): bool {
+    if (empty($lock_dir)) {
+        $lock_dir = dirname(__DIR__) . '/data/.locks/';
+    }
     $lock_file = $lock_dir . md5($path) . '.lock';
     
     if (!file_exists($lock_file)) {
