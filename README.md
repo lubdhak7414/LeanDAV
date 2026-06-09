@@ -1,37 +1,44 @@
-# LeanDAV - Lightweight PHP WebDAV Server with Web UI
+# LeanDAV - PHP WebDAV Server with Web UI
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.0+-777bb4.svg)](https://php.net)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker Support](https://img.shields.io/badge/Docker-Supported-2496ED.svg)](https://www.docker.com/)
 
-**LeanDAV** is an ultra-lightweight, zero-dependency PHP WebDAV server and self-hosted file manager. It allows you to instantly turn any PHP/Apache server or Docker environment into a private cloud storage drive. 
+**LeanDAV** is a PHP-based WebDAV server with a built-in web interface for file management.
 
-Mount your files natively on Windows File Explorer, macOS Finder, or Linux—or manage them from anywhere using the beautifully designed, responsive browser UI.
+It runs without a database or external PHP dependencies and can be deployed on a standard PHP web server or with Docker.
 
-> **Why LeanDAV?** Most WebDAV solutions (like Nextcloud or full SabreDAV implementations) are heavy, require complex database setups, and use massive amounts of memory. LeanDAV is designed to be a "drop-in" solution. No databases, no Composer dependencies—just fast, secure file serving.
+Files can be accessed through WebDAV clients such as Windows File Explorer, macOS Finder, and Linux desktop environments, or through the included browser-based interface.
 
 ![LeanDAV Web UI Screenshot](link-to-your-screenshot-image.png)
-*(Replace the link above with a relative path to the screenshot you showed me earlier, e.g., `./docs/screenshot.png`)*
 
-## Key Features
+## Why LeanDAV?
 
-- **Zero Dependencies:** Pure PHP core implementation. No Composer, no databases required.
-- **Cross-Platform Native Mounting:** Fully tested and compatible with Windows File Explorer, macOS Finder, and Linux (Nautilus/GVFS/davfs2).
-- **Modern Web Dashboard:** Includes a sleek, dark-mode browser interface for uploading, downloading, and file management.
-- **Docker Ready:** Deploy in seconds using the provided Docker Compose configurations.
-- **Security First:** Built-in protection against path traversal, strict HTTPS enforcement, and secure HTTP headers.
-- **Smart File Handling:** Supports atomic stream-based uploads, resumable downloads (Range Requests), and video seeking.
-- **Robust Locking:** File-based lock management (Class 1+2 protocol support) with automatic garbage collection to prevent "File in use" errors.
+LeanDAV is intended for users who need WebDAV storage and file management without additional services or infrastructure.
+
+The project stores files directly on disk and does not require a database. Deployment consists of copying the application files and configuring a small number of settings.
+
+## Features
+
+* WebDAV server implementation in PHP
+* No database required
+* No Composer dependencies
+* Browser-based file manager
+* Docker deployment support
+* File uploads and downloads
+* HTTP Range request support
+* File and directory operations (copy, move, rename, delete)
+* WebDAV locking support
+* Configurable storage and upload limits
+* Compatible with Windows, macOS, and Linux WebDAV clients
 
 ---
 
-## Quick Start Installation
+## Installation
 
-You can run LeanDAV on a traditional web server or via Docker. 
+You can run LeanDAV on a traditional web server or with Docker.
 
-### Option A: Docker Deployment (Recommended)
-
-The fastest way to get your self-hosted WebDAV server running:
+### Option A: Docker
 
 ```bash
 # Clone the repository
@@ -40,106 +47,241 @@ cd LeanDAV
 
 # Create configuration
 cp config.example.php config.php
-# Edit config.php to set your custom username and password
 
-# Build and start the container
+# Edit config.php and set your credentials
+
+# Start the container
 docker compose up -d
 ```
-Your WebDAV server and UI are now accessible at `http://localhost:8080`. 
 
-*(Note: For production, we recommend using the provided `docker-compose.prod.yml` which includes automatic HTTPS via Caddy).*
+The application will be available at:
 
-### Option B: Manual PHP/Apache Setup
+```text
+http://localhost:8080
+```
 
-**Requirements:** PHP 8.0+ (with `fileinfo`, `xmlwriter`, `dom`, `json` extensions), Apache (with `mod_rewrite`) or Nginx.
+For production deployments, use HTTPS and a reverse proxy. The repository includes a production Docker Compose configuration with Caddy.
 
-1. Clone the repository to your web root.
-2. `cp config.example.php config.php` and configure your credentials.
-3. Apply the necessary write permissions to the data directories:
-   ```bash
-   chmod 755 data/ data/.locks/ data/.logs/
-   ```
-4. Ensure Apache modules are active: `sudo a2enmod rewrite headers && sudo systemctl restart apache2`
-5. Navigate to your domain in a browser to view the UI, or connect via your OS file manager.
+### Option B: PHP Web Server
+
+#### Requirements
+
+* PHP 8.0+
+* Apache or Nginx
+* PHP extensions:
+
+  * fileinfo
+  * xmlwriter
+  * dom
+  * json
+
+#### Setup
+
+1. Clone the repository into your web root.
+2. Copy the example configuration:
+
+```bash
+cp config.example.php config.php
+```
+
+3. Edit `config.php` and configure your credentials.
+4. Ensure the data directories are writable:
+
+```bash
+chmod 755 data/ data/.locks/ data/.logs/
+```
+
+5. If using Apache, enable the required modules:
+
+```bash
+sudo a2enmod rewrite headers
+sudo systemctl restart apache2
+```
+
+6. Open your site in a browser or connect using a WebDAV client.
 
 ---
 
-## ⚙️ Configuration (`config.php`)
+## Configuration
 
-LeanDAV is highly customizable. Edit `config.php` to adjust storage paths, upload limits, and security settings:
+Configure LeanDAV by editing `config.php`.
+
+Example:
 
 ```php
 <?php
+
 return [
     'auth' => [
-        'username' => 'admin',       // Change this!
-        'password' => 'supersecret', // Change this!
+        'username' => 'admin',
+        'password' => 'supersecret',
     ],
-    'storage_path' => __DIR__ . '/data/',
-    'max_upload_size' => 104857600,  // 100MB limit
-    'lock_dir' => __DIR__ . '/data/.locks/',
-    'lock_timeout' => 600,
-    'hide_dotfiles' => true,         // Hides .htaccess, .DS_Store, etc.
-    'log_level' => 'info',
+
+    'storage_path'   => __DIR__ . '/data/',
+    'max_upload_size' => 104857600,
+    'lock_dir'       => __DIR__ . '/data/.locks/',
+    'lock_timeout'   => 600,
+
+    'hide_dotfiles'  => true,
+    'log_level'      => 'info',
 ];
 ```
 
+### Configuration Options
+
+| Option            | Description                        |
+| ----------------- | ---------------------------------- |
+| `username`        | Login username                     |
+| `password`        | Login password                     |
+| `storage_path`    | Directory used for file storage    |
+| `max_upload_size` | Maximum upload size in bytes       |
+| `lock_dir`        | Directory used for lock files      |
+| `lock_timeout`    | Lock expiration time in seconds    |
+| `hide_dotfiles`   | Hide dotfiles in the web interface |
+| `log_level`       | Logging verbosity                  |
+
 ---
 
-## How to Mount as a Network Drive
+## Connecting a WebDAV Client
 
-Once LeanDAV is running (ideally over HTTPS), you can mount it directly to your operating system.
+Once the server is running, it can be mounted through any WebDAV-compatible client.
 
 ### Windows
+
 1. Open **File Explorer**.
 2. Right-click **This PC** → **Map network drive**.
-3. Enter your server URL: `https://your-domain.com`
-4. Check **"Connect using different credentials"** and enter your `config.php` login.
-*(Alternative Windows methods available in [windows-alternative.md](windows-alternative.md))*
+3. Enter your WebDAV URL:
+
+```text
+https://your-domain.com
+```
+
+4. Select **Connect using different credentials**.
+5. Enter your LeanDAV username and password.
 
 ### macOS
+
 1. Open **Finder**.
-2. Press `Cmd + K` (or Go → Connect to Server).
-3. Enter `https://your-domain.com` and provide your credentials.
+2. Press **Cmd + K**.
+3. Enter:
+
+```text
+https://your-domain.com
+```
+
+4. Authenticate with your credentials.
 
 ### Linux
-**GNOME Desktop:**
+
+#### GNOME
+
 ```bash
 gio mount dav://your-domain.com
 ```
-**Command Line (davfs2):**
-Add to `/etc/fstab`: `https://your-domain.com /mnt/webdav davfs user,noauto 0 0`
-Then run: `sudo mount /mnt/webdav`
+
+#### davfs2
+
+Add the following entry to `/etc/fstab`:
+
+```text
+https://your-domain.com /mnt/webdav davfs user,noauto 0 0
+```
+
+Mount the share:
+
+```bash
+sudo mount /mnt/webdav
+```
 
 ---
 
-## 🛠️ API & Under the Hood
+## WebDAV Support
 
-LeanDAV strictly adheres to **RFC 4918**. 
+LeanDAV implements the following WebDAV methods and is designed to work with common desktop clients.
 
-### Supported WebDAV Methods
-| Method | Description |
-|--------|-------------|
-| `OPTIONS`, `PROPFIND` | Directory listing, metadata discovery, and DAV compliance |
-| `GET`, `HEAD` | Download files (with byte-range support) |
-| `PUT`, `MKCOL` | Atomic file uploads and directory creation |
-| `DELETE`, `MOVE`, `COPY` | Recursive file/folder operations |
-| `LOCK`, `UNLOCK` | Write-lock acquisition for safe simultaneous editing |
+| Method     | Purpose                        |
+| ---------- | ------------------------------ |
+| `OPTIONS`  | Capability discovery           |
+| `PROPFIND` | Directory listing and metadata |
+| `GET`      | Download files                 |
+| `HEAD`     | Metadata retrieval             |
+| `PUT`      | Upload files                   |
+| `MKCOL`    | Create directories             |
+| `DELETE`   | Remove files and directories   |
+| `MOVE`     | Move files and directories     |
+| `COPY`     | Copy files and directories     |
+| `LOCK`     | Acquire write locks            |
+| `UNLOCK`   | Release write locks            |
 
-### Browser UI Endpoints
-The frontend dashboard interacts with LeanDAV via standard HTTP POST/GET requests for maximum compatibility:
-- `/?action=upload` (POST)
-- `/?action=download&path=X` (GET)
-- `/?action=mkdir`, `delete`, `rename` (POST)
+### Additional Support
+
+* HTTP Range requests
+* Recursive directory operations
+* Stream-based uploads
+* File locking with automatic cleanup
+
+---
+
+## Web Interface Endpoints
+
+The web interface uses the following endpoints:
+
+| Endpoint                   | Method |
+| -------------------------- | ------ |
+| `/?action=upload`          | POST   |
+| `/?action=download&path=X` | GET    |
+| `/?action=mkdir`           | POST   |
+| `/?action=delete`          | POST   |
+| `/?action=rename`          | POST   |
+
+---
+
+## Directory Layout
+
+```text
+.
+├── config.php
+├── data/
+│   ├── .locks/
+│   └── .logs/
+├── public/
+├── docker-compose.yml
+└── docker-compose.prod.yml
+```
 
 ---
 
 ## Troubleshooting
 
-*   **90-second delay on macOS?** LeanDAV automatically omits quota properties for Finder clients to fix this known Apple bug. Ensure you are on the latest version.
-*   **Windows "File in use" error?** Your client is failing to send proper lock tokens. LeanDAV supports robust LOCK/UNLOCK to prevent this. Ensure your Windows WebClient service is running properly.
-*   **Large Uploads Failing?** Check your server's `php.ini` configuration. Ensure `upload_max_filesize`, `post_max_size`, and `max_execution_time` are set high enough.
+### Slow Connection on macOS
+
+Some Finder versions may perform additional WebDAV property requests during connection. If connection times are unexpectedly slow, ensure you are running a recent version of macOS and verify that the server is reachable over HTTPS.
+
+### Windows "File in Use" Errors
+
+Verify that the Windows WebClient service is running and that the client supports WebDAV locking correctly.
+
+### Uploads Fail for Large Files
+
+Check your PHP configuration:
+
+```ini
+upload_max_filesize
+post_max_size
+max_execution_time
+memory_limit
+```
+
+Ensure these values are appropriate for the files being uploaded.
+
+### Permission Errors
+
+Verify that the configured storage, lock, and log directories are writable by the web server process.
+
+---
 
 ## License
 
-This project is open-source software licensed under the [MIT License](LICENSE).
+Released under the MIT License.
+
+See the `LICENSE` file for details.
