@@ -13,157 +13,221 @@
 function output_ui_css(): void {
 ?>
     <style>
-        * {
+        /* ===== Reset & Base ===== */
+        *, *::before, *::after {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
         body {
-            font-family: 'JetBrains Mono', monospace;
-            background: #0a0a0a;
-            color: #e8e4dc;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0c0c0e;
+            color: #e4e4e7;
             min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .mono-data {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1280px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 16px 20px;
         }
 
+        /* ===== Header ===== */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
-            background: #141414;
-            border: 1px solid #2a2a2a;
-            margin-bottom: 20px;
+            padding: 14px 20px;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: rgba(232, 165, 48, 0.12);
+            border-radius: 8px;
+            color: #e8a530;
         }
 
         .header h1 {
-            font-size: 18px;
-            font-weight: 700;
-            color: #e8a530;
+            font-size: 16px;
+            font-weight: 600;
+            color: #fafafa;
+            letter-spacing: -0.01em;
         }
 
-        .header .user {
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e8a530 0%, #d4942a 100%);
+            color: #0a0a0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 12px;
-            color: #a09b94;
+            font-weight: 600;
         }
 
-        .breadcrumb {
+        .username {
+            font-size: 13px;
+            color: #a1a1aa;
+            font-weight: 500;
+        }
+
+        .header-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            color: #71717a;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+
+        .header-icon:hover {
+            background: #27272a;
+            color: #e4e4e7;
+        }
+
+        /* ===== Breadcrumb ===== */
+        .breadcrumb-bar {
             display: flex;
             align-items: center;
             flex-wrap: wrap;
-            gap: 4px;
-            padding: 15px 20px;
-            background: #141414;
-            border: 1px solid #2a2a2a;
-            margin-bottom: 20px;
-            font-size: 14px;
+            gap: 2px;
+            padding: 10px 16px;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            font-size: 13px;
         }
 
-        .breadcrumb a {
-            color: #e8a530;
+        .breadcrumb-bar a {
+            color: #a1a1aa;
+            text-decoration: none;
+            padding: 4px 6px;
+            border-radius: 5px;
+            transition: all 0.15s;
+        }
+
+        .breadcrumb-bar a:hover {
+            color: #fafafa;
+            background: #27272a;
             text-decoration: none;
         }
 
-        .breadcrumb a:hover {
-            text-decoration: underline;
+        .breadcrumb-bar a.current {
+            color: #e8e530;
+            font-weight: 500;
+            pointer-events: none;
         }
 
-        .breadcrumb .separator {
-            color: #a09b94;
-            margin: 0 4px;
+        .breadcrumb-bar .separator {
+            color: #3f3f46;
+            margin: 0 2px;
+            font-size: 11px;
         }
 
-        .breadcrumb .up-btn {
+        .up-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             width: 28px;
             height: 28px;
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 4px;
-            color: #e8a530;
+            background: #27272a;
+            border: 1px solid #3f3f46;
+            border-radius: 6px;
+            color: #a1a1aa;
             text-decoration: none;
-            font-size: 14px;
-            margin-right: 8px;
-            transition: background 0.15s, border-color 0.15s;
+            margin-right: 6px;
+            transition: all 0.15s;
             flex-shrink: 0;
         }
 
-        .breadcrumb .up-btn:hover {
-            background: #222;
-            border-color: #e8a530;
+        .up-btn:hover {
+            background: #3f3f46;
+            border-color: #52525b;
+            color: #fafafa;
             text-decoration: none;
         }
 
+        /* ===== Main Grid ===== */
         .main {
             display: grid;
-            grid-template-columns: 250px 1fr;
-            gap: 20px;
+            grid-template-columns: 240px 1fr;
+            gap: 12px;
         }
 
-        @media (max-width: 768px) {
-            .main {
-                grid-template-columns: 1fr;
-            }
-
-            .content-header {
-                grid-template-columns: 1fr 80px 60px;
-            }
-
-            .file-item {
-                grid-template-columns: 1fr 80px 60px;
-            }
-
-            .file-item .actions {
-                position: static;
-                opacity: 1;
-            }
-
-            .file-item .modified {
-                display: none;
-            }
-
-            .content-header span:nth-child(3) {
-                display: none;
-            }
-        }
-
+        /* ===== Sidebar ===== */
         .sidebar {
-            background: #141414;
-            border: 1px solid #2a2a2a;
-            padding: 20px;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 12px;
+            padding: 18px;
+            height: fit-content;
+            position: sticky;
+            top: 16px;
         }
 
         .sidebar h2 {
-            font-size: 14px;
-            font-weight: 500;
-            color: #a09b94;
-            margin-bottom: 15px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #71717a;
+            margin-bottom: 14px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.08em;
         }
 
         .upload-zone {
-            border: 2px dashed #2a2a2a;
-            border-radius: 8px;
-            padding: 30px 20px;
+            border: 1.5px dashed #3f3f46;
+            border-radius: 10px;
+            padding: 22px 16px;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 14px;
             cursor: pointer;
-            transition: border-color 0.2s, background 0.2s;
+            transition: all 0.2s;
         }
 
         .upload-zone:hover,
         .upload-zone.dragover {
             border-color: #e8a530;
-            background: rgba(232, 165, 48, 0.05);
+            background: rgba(232, 165, 48, 0.04);
         }
 
         .upload-zone:focus {
@@ -171,178 +235,347 @@ function output_ui_css(): void {
             outline-offset: 2px;
         }
 
-        .upload-zone .icon {
-            font-size: 32px;
+        .upload-icon {
+            color: #52525b;
             margin-bottom: 10px;
+            transition: color 0.2s;
+        }
+
+        .upload-zone:hover .upload-icon {
+            color: #e8a530;
         }
 
         .upload-zone .text {
             font-size: 12px;
-            color: #a09b94;
+            color: #a1a1aa;
+            line-height: 1.5;
         }
 
         .upload-zone .hint {
             font-size: 11px;
-            color: #777;
-            margin-top: 8px;
+            color: #52525b;
+            margin-top: 6px;
         }
 
+        #fileInput {
+            display: none;
+        }
+
+        .sidebar-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        /* ===== Buttons ===== */
         .btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background: #e8a530;
-            color: #0a0a0a;
-            border: none;
-            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 9px 14px;
+            border-radius: 8px;
             font-family: inherit;
             font-size: 12px;
             font-weight: 500;
             cursor: pointer;
-            transition: background 0.2s;
-            margin-bottom: 10px;
+            transition: all 0.15s;
+            border: none;
+            width: 100%;
         }
 
-        .btn:hover {
+        .btn-primary {
+            background: #e8a530;
+            color: #0a0a0a;
+        }
+
+        .btn-primary:hover {
             background: #d4942a;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
         }
 
         .btn-secondary {
-            background: transparent;
-            border: 1px solid #2a2a2a;
-            color: #e8e4dc;
+            background: #27272a;
+            border: 1px solid #3f3f46;
+            color: #d4d4d8;
         }
 
         .btn-secondary:hover {
-            background: #1a1a1a;
+            background: #3f3f46;
+            border-color: #52525b;
         }
 
-        .btn-danger {
-            background: transparent;
-            border: 1px solid #5a2020;
-            color: #e85050;
-        }
-
-        .btn-danger:hover {
-            background: #2a1010;
-        }
-
+        /* ===== Stats ===== */
         .stats {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #2a2a2a;
+            padding-top: 14px;
+            border-top: 1px solid #27272a;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
             font-size: 12px;
-            color: #a09b94;
+            color: #a1a1aa;
         }
 
-        .stats .value {
-            color: #e8e4dc;
+        .stat-icon {
+            font-size: 12px;
+            width: 18px;
+            text-align: center;
+        }
+
+        .stat-label {
+            flex: 1;
+        }
+
+        .stat-value {
+            color: #e4e4e7;
             font-weight: 500;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
         }
 
-        /* Search / filter */
+        /* ===== Progress ===== */
+        .progress {
+            display: none;
+            margin: 14px 0;
+        }
+
+        .progress.active {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #27272a;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e8a530, #f0b840);
+            transition: width 0.2s;
+            width: 0%;
+            border-radius: 2px;
+        }
+
+        .progress-text {
+            font-size: 11px;
+            color: #71717a;
+            margin-top: 8px;
+        }
+
+        /* ===== Content Area ===== */
+        .content {
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 12px;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        /* ===== Toolbar ===== */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 16px;
+            border-bottom: 1px solid #27272a;
+        }
+
+        .toolbar-left {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .toolbar-right {
+            flex-shrink: 0;
+        }
+
         .search-box {
-            margin-bottom: 20px;
+            position: relative;
+            max-width: 320px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #52525b;
+            pointer-events: none;
         }
 
         .search-box input {
             width: 100%;
-            padding: 10px 12px;
-            background: #0a0a0a;
-            border: 1px solid #2a2a2a;
-            border-radius: 6px;
-            color: #e8e4dc;
+            padding: 8px 10px 8px 32px;
+            background: #0c0c0e;
+            border: 1px solid #3f3f46;
+            border-radius: 8px;
+            color: #e4e4e7;
             font-family: inherit;
-            font-size: 12px;
-            transition: border-color 0.2s;
+            font-size: 13px;
+            transition: all 0.2s;
         }
 
         .search-box input::placeholder {
-            color: #777;
+            color: #52525b;
         }
 
         .search-box input:focus {
             outline: none;
             border-color: #e8a530;
+            box-shadow: 0 0 0 2px rgba(232, 165, 48, 0.12);
         }
 
-        /* Visually hidden for screen readers */
-        .visually-hidden {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
+        /* ===== Bulk Actions ===== */
+        .bulk-actions {
+            display: none;
+            align-items: center;
+            gap: 8px;
         }
 
-        /* Sort controls */
-        .sort-controls {
+        .bulk-actions.visible {
             display: flex;
-            gap: 6px;
-            margin-bottom: 12px;
         }
 
-        .sort-btn {
-            padding: 4px 10px;
+        .selected-count {
+            font-size: 12px;
+            color: #a1a1aa;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .btn-bulk {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #3f3f46;
             background: transparent;
-            border: 1px solid #2a2a2a;
-            border-radius: 4px;
-            color: #a09b94;
+            color: #d4d4d8;
             font-family: inherit;
-            font-size: 11px;
+            font-size: 12px;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.15s;
+            white-space: nowrap;
         }
 
-        .sort-btn:hover {
-            color: #e8e4dc;
-            border-color: #a09b94;
+        .btn-bulk-download {
+            border-color: rgba(34, 197, 94, 0.3);
+            color: #4ade80;
         }
 
-        .sort-btn.active {
-            color: #e8a530;
-            border-color: #e8a530;
+        .btn-bulk-download:hover {
+            background: rgba(34, 197, 94, 0.08);
+            border-color: #4ade80;
         }
 
-        .content {
-            background: #141414;
-            border: 1px solid #2a2a2a;
+        .btn-bulk-delete {
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #f87171;
         }
 
+        .btn-bulk-delete:hover {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: #f87171;
+        }
+
+        /* ===== File Table Header ===== */
         .content-header {
             display: grid;
-            grid-template-columns: 1fr 100px 150px 100px;
-            padding: 15px 20px;
-            border-bottom: 1px solid #2a2a2a;
+            grid-template-columns: 36px 1fr 90px 140px 100px;
+            padding: 0 16px;
+            height: 40px;
+            border-bottom: 1px solid #27272a;
             font-size: 11px;
-            color: #a09b94;
+            font-weight: 600;
+            color: #71717a;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.06em;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.015);
         }
 
+        .content-header .sortable {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            user-select: none;
+            transition: color 0.15s;
+        }
+
+        .content-header .sortable:hover {
+            color: #d4d4d8;
+        }
+
+        .content-header .sortable.active-sort {
+            color: #e8a530;
+        }
+
+        .sort-indicator {
+            font-size: 9px;
+            line-height: 1;
+        }
+
+        /* ===== File List ===== */
         .file-list {
-            min-height: 400px;
+            min-height: 360px;
         }
 
         .file-item {
             display: grid;
-            grid-template-columns: 1fr 100px 150px 100px;
-            padding: 12px 20px;
-            border-bottom: 1px solid #1a1a1a;
+            grid-template-columns: 36px 1fr 90px 140px 100px;
+            padding: 0 16px;
+            height: 44px;
+            border-bottom: 1px solid #1f1f23;
             font-size: 13px;
             transition: background 0.1s;
+            align-items: center;
+            position: relative;
+        }
+
+        .file-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: transparent;
+            transition: background 0.15s;
+        }
+
+        .file-item:hover {
+            background: rgba(255, 255, 255, 0.025);
+        }
+
+        .file-item:hover::before {
+            background: #e8a530;
+        }
+
+        .file-item.selected {
+            background: rgba(232, 165, 48, 0.06);
+        }
+
+        .file-item.selected::before {
+            background: #e8a530;
         }
 
         .file-item[data-type="dir"] {
             cursor: pointer;
-        }
-
-        .file-item:hover {
-            background: #1a1a1a;
         }
 
         .file-item .name {
@@ -350,6 +583,7 @@ function output_ui_css(): void {
             align-items: center;
             gap: 10px;
             overflow: hidden;
+            min-width: 0;
         }
 
         .file-item .name a,
@@ -359,19 +593,38 @@ function output_ui_css(): void {
             white-space: nowrap;
         }
 
-        .file-item .icon {
-            font-size: 16px;
+        .file-item .name a {
+            color: #fafafa;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .file-item .name a:hover {
+            color: #e8a530;
+        }
+
+        .file-item .name span.name-text {
+            color: #e4e4e7;
+        }
+
+        .file-icon {
             flex-shrink: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .dir-icon {
+            color: #e8a530;
         }
 
         .file-item .size,
         .file-item .modified {
-            color: #a09b94;
+            color: #71717a;
         }
 
         .file-item .actions {
             display: flex;
-            gap: 8px;
+            gap: 2px;
             justify-content: flex-end;
             opacity: 0;
             transition: opacity 0.15s;
@@ -385,36 +638,101 @@ function output_ui_css(): void {
         .file-item .actions button {
             background: transparent;
             border: none;
-            color: #a09b94;
+            color: #71717a;
             cursor: pointer;
-            padding: 4px;
-            font-size: 14px;
+            padding: 5px;
+            border-radius: 5px;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .file-item .actions button:hover {
             color: #e8a530;
+            background: rgba(232, 165, 48, 0.1);
         }
 
         .file-item .actions button.delete:hover {
-            color: #e85050;
+            color: #f87171;
+            background: rgba(239, 68, 68, 0.1);
         }
 
+        /* ===== Checkbox Cells ===== */
+        .checkbox-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .checkbox-cell input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 1.5px solid #3f3f46;
+            border-radius: 4px;
+            background: #0c0c0e;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+
+        .checkbox-cell input[type="checkbox"]:hover {
+            border-color: #71717a;
+        }
+
+        .checkbox-cell input[type="checkbox"]:checked {
+            background: #e8a530;
+            border-color: #e8a530;
+        }
+
+        .checkbox-cell input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 5px;
+            width: 4px;
+            height: 7px;
+            border: solid #0a0a0a;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .header-cell input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+        }
+
+        /* ===== Empty State ===== */
         .empty-state {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 400px;
-            color: #a09b94;
-            font-size: 14px;
+            padding: 80px 20px;
         }
 
-        .empty-state .icon {
-            font-size: 48px;
-            margin-bottom: 15px;
+        .empty-icon {
+            color: #27272a;
+            margin-bottom: 16px;
         }
 
-        /* Modal */
+        .empty-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #a1a1aa;
+            margin-bottom: 6px;
+        }
+
+        .empty-subtitle {
+            font-size: 13px;
+            color: #52525b;
+        }
+
+        /* ===== Modal ===== */
         .modal {
             display: none;
             position: fixed;
@@ -422,7 +740,8 @@ function output_ui_css(): void {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
             z-index: 1000;
             align-items: center;
             justify-content: center;
@@ -433,34 +752,39 @@ function output_ui_css(): void {
         }
 
         .modal-content {
-            background: #141414;
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            padding: 30px;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 14px;
+            padding: 28px;
             width: 100%;
             max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
         .modal-content h2 {
             font-size: 16px;
-            margin-bottom: 20px;
+            font-weight: 600;
+            margin-bottom: 18px;
+            color: #fafafa;
         }
 
         .modal-content input {
             width: 100%;
-            padding: 12px;
-            background: #0a0a0a;
-            border: 1px solid #2a2a2a;
-            border-radius: 6px;
-            color: #e8e4dc;
+            padding: 10px 14px;
+            background: #0c0c0e;
+            border: 1px solid #3f3f46;
+            border-radius: 8px;
+            color: #e4e4e7;
             font-family: inherit;
             font-size: 14px;
             margin-bottom: 20px;
+            transition: border-color 0.2s;
         }
 
         .modal-content input:focus {
             outline: none;
             border-color: #e8a530;
+            box-shadow: 0 0 0 2px rgba(232, 165, 48, 0.12);
         }
 
         .modal-actions {
@@ -471,53 +795,24 @@ function output_ui_css(): void {
 
         .modal-actions .btn {
             width: auto;
-            padding: 10px 20px;
+            padding: 9px 20px;
         }
 
-        /* Progress */
-        .progress {
-            display: none;
-            margin-top: 15px;
-        }
-
-        .progress.active {
-            display: block;
-        }
-
-        .progress-bar {
-            height: 4px;
-            background: #2a2a2a;
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            background: #e8a530;
-            transition: width 0.2s;
-            width: 0%;
-        }
-
-        .progress-text {
-            font-size: 11px;
-            color: #a09b94;
-            margin-top: 8px;
-        }
-
-        /* Toast */
+        /* ===== Toast ===== */
         .toast {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: #141414;
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            padding: 15px 20px;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 10px;
+            padding: 12px 18px;
             font-size: 13px;
             z-index: 2000;
             transform: translateY(100px);
             opacity: 0;
-            transition: transform 0.3s, opacity 0.3s;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
         }
 
         .toast.active {
@@ -526,15 +821,158 @@ function output_ui_css(): void {
         }
 
         .toast.success {
-            border-color: #4caf50;
+            border-color: rgba(34, 197, 94, 0.4);
+            color: #4ade80;
         }
 
         .toast.error {
-            border-color: #e85050;
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #f87171;
         }
 
-        #fileInput {
-            display: none;
+        /* ===== Loading Spinner ===== */
+        .spinner-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner-overlay .spinner-text {
+            background: #18181b;
+            border: 1px solid #e8a530;
+            border-radius: 10px;
+            padding: 18px 28px;
+            font-size: 14px;
+            color: #e8a530;
+            font-weight: 500;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ===== Visually Hidden ===== */
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* ===== Responsive / Mobile ===== */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .main {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+                order: 2;
+            }
+
+            .content {
+                order: 1;
+            }
+
+            .content-header {
+                grid-template-columns: 32px 1fr 80px 60px;
+            }
+
+            .content-header .col-modified {
+                display: none;
+            }
+
+            .file-item {
+                grid-template-columns: 32px 1fr 80px 60px;
+                height: 48px;
+            }
+
+            .file-item .modified {
+                display: none;
+            }
+
+            .file-item .actions {
+                opacity: 1;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .toolbar-left, .toolbar-right {
+                width: 100%;
+            }
+
+            .search-box {
+                max-width: none;
+            }
+
+            .bulk-actions {
+                justify-content: flex-end;
+            }
+
+            .header h1 {
+                font-size: 14px;
+            }
+
+            .username {
+                display: none;
+            }
+
+            .content {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            body {
+                overflow-x: hidden;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .content-header {
+                grid-template-columns: 32px 1fr 60px;
+            }
+
+            .content-header .col-size {
+                display: none;
+            }
+
+            .file-item {
+                grid-template-columns: 32px 1fr 60px;
+            }
+
+            .file-item .size {
+                display: none;
+            }
+
+            .upload-zone {
+                padding: 16px 12px;
+            }
+
+            .sidebar-buttons {
+                flex-direction: row;
+            }
+
+            .sidebar-buttons .btn {
+                font-size: 11px;
+                padding: 8px 10px;
+            }
         }
     </style>
 <?php
@@ -560,11 +998,15 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
         const csrfToken = <?php echo json_encode($csrf_token); ?>;
         const uploadMaxMb = <?php echo (int)$max_upload_mb; ?>;
 
-        // ===== Upload Zone =====
+        // ===== DOM refs =====
         const uploadZone = document.getElementById('uploadZone');
         const fileInput = document.getElementById('fileInput');
         const fileList = document.getElementById('fileList');
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const bulkActions = document.getElementById('bulkActions');
+        const selectedCountEl = document.getElementById('selectedCount');
 
+        // ===== Upload Zone =====
         uploadZone.addEventListener('click', () => fileInput.click());
         uploadZone.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -632,7 +1074,6 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
             uploadIndex++;
 
             await uploadFile(file, uploadIndex, total);
-
             await processUploadQueue();
         }
 
@@ -697,9 +1138,7 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
 
         // ===== Delete =====
         async function deleteItem(path, name) {
-            if (!confirm('Delete "' + name + '"?')) {
-                return;
-            }
+            if (!confirm('Delete "' + name + '"?')) return;
 
             try {
                 const response = await fetch('?action=delete&path=' + encodeURIComponent(path), {
@@ -710,22 +1149,183 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
 
                 if (response.ok) {
                     showToast('Deleted: ' + name, 'success');
-                    // Remove the item from DOM instead of reloading
                     const item = fileList.querySelector('[data-path="' + CSS.escape(path) + '"]');
-                    if (item) {
-                        item.remove();
-                    }
-                    // Show empty state if no items left
-                    if (fileList.querySelectorAll('.file-item').length === 0) {
-                        fileList.innerHTML = '<div class="empty-state" id="emptyState"><div class="icon">📭</div><div>No files yet</div></div>';
-                    }
+                    if (item) item.remove();
+                    updateSelectionUI();
+                    checkEmptyState();
                 } else {
-                    const text = await response.text();
-                    showToast('Delete failed: ' + text, 'error');
+                    showToast('Delete failed: ' + await response.text(), 'error');
                 }
             } catch (error) {
                 showToast('Delete error: ' + error.message, 'error');
             }
+        }
+
+        // ===== Unzip / Extract =====
+        async function unzipFile(path, name) {
+            if (!confirm('Extract "' + name + '" into the current folder?')) return;
+            showSpinner('Extracting…');
+            try {
+                const response = await fetch('?action=unzip&path=' + encodeURIComponent(path), {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': csrfToken },
+                    body: 'csrf_token=' + encodeURIComponent(csrfToken)
+                });
+
+                hideSpinner();
+                if (response.ok) {
+                    showToast('Extracted: ' + name, 'success');
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    showToast('Extract failed: ' + await response.text(), 'error');
+                }
+            } catch (error) {
+                hideSpinner();
+                showToast('Extract error: ' + error.message, 'error');
+            }
+        }
+
+        // ===== Multi-Select =====
+        function getCheckboxes() {
+            return Array.from(fileList.querySelectorAll('.file-checkbox'));
+        }
+
+        function updateSelectionUI() {
+            const checked = getCheckboxes().filter(cb => cb.checked);
+            const count = checked.length;
+            selectedCountEl.textContent = count + ' selected';
+
+            if (count > 0) {
+                bulkActions.classList.add('visible');
+            } else {
+                bulkActions.classList.remove('visible');
+            }
+
+            const total = getCheckboxes().length;
+            selectAllCheckbox.checked = total > 0 && count === total;
+            selectAllCheckbox.indeterminate = count > 0 && count < total;
+
+            getCheckboxes().forEach(cb => {
+                const row = cb.closest('.file-item');
+                if (row) row.classList.toggle('selected', cb.checked);
+            });
+        }
+
+        selectAllCheckbox.addEventListener('change', () => {
+            const checked = selectAllCheckbox.checked;
+            getCheckboxes().forEach(cb => {
+                const row = cb.closest('.file-item');
+                if (row && row.style.display !== 'none') cb.checked = checked;
+            });
+            updateSelectionUI();
+        });
+
+        fileList.addEventListener('change', (e) => {
+            if (e.target.classList.contains('file-checkbox')) updateSelectionUI();
+        });
+
+        function getSelectedPaths() {
+            return getCheckboxes().filter(cb => cb.checked).map(cb => cb.value);
+        }
+
+        // ===== Bulk Download as ZIP =====
+        async function bulkDownload() {
+            const paths = getSelectedPaths();
+            if (paths.length === 0) return;
+
+            showSpinner('Creating ZIP…');
+            try {
+                const formData = new FormData();
+                formData.append('csrf_token', csrfToken);
+                paths.forEach(p => formData.append('paths[]', p));
+
+                const response = await fetch('?action=zip-download&path=' + encodeURIComponent(currentPath), {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': csrfToken },
+                    body: formData
+                });
+
+                hideSpinner();
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const disposition = response.headers.get('Content-Disposition') || '';
+                    let filename = 'download.zip';
+                    const match = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";\s]+)/i);
+                    if (match) filename = decodeURIComponent(match[1]);
+
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast('ZIP downloaded (' + paths.length + ' items)', 'success');
+                } else {
+                    showToast('ZIP failed: ' + await response.text(), 'error');
+                }
+            } catch (error) {
+                hideSpinner();
+                showToast('ZIP error: ' + error.message, 'error');
+            }
+        }
+
+        // ===== Bulk Delete =====
+        async function bulkDelete() {
+            const paths = getSelectedPaths();
+            if (paths.length === 0) return;
+
+            if (!confirm('Delete ' + paths.length + ' item(s)? This cannot be undone.')) return;
+
+            showSpinner('Deleting…');
+            let deleted = 0, failed = 0;
+
+            for (const path of paths) {
+                try {
+                    const response = await fetch('?action=delete&path=' + encodeURIComponent(path), {
+                        method: 'POST',
+                        headers: { 'X-CSRF-Token': csrfToken },
+                        body: 'csrf_token=' + encodeURIComponent(csrfToken)
+                    });
+
+                    if (response.ok) {
+                        deleted++;
+                        const item = fileList.querySelector('[data-path="' + CSS.escape(path) + '"]');
+                        if (item) item.remove();
+                    } else {
+                        failed++;
+                    }
+                } catch (e) { failed++; }
+            }
+
+            hideSpinner();
+            updateSelectionUI();
+            if (deleted > 0) {
+                showToast('Deleted ' + deleted + (failed ? ', ' + failed + ' failed' : ''), failed === 0 ? 'success' : 'error');
+            }
+            checkEmptyState();
+        }
+
+        function checkEmptyState() {
+            if (fileList.querySelectorAll('.file-item').length === 0) {
+                fileList.innerHTML = '<div class="empty-state" id="emptyState"><div class="empty-icon"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></div><div class="empty-title">No files here</div><div class="empty-subtitle">Drop files or click Upload to get started</div></div>';
+            }
+        }
+
+        // ===== Spinner =====
+        function showSpinner(text) {
+            const existing = document.querySelector('.spinner-overlay');
+            if (existing) existing.remove();
+            const overlay = document.createElement('div');
+            overlay.className = 'spinner-overlay';
+            overlay.innerHTML = '<div class="spinner-text">' + (text || 'Working…') + '</div>';
+            document.body.appendChild(overlay);
+        }
+
+        function hideSpinner() {
+            const overlay = document.querySelector('.spinner-overlay');
+            if (overlay) overlay.remove();
         }
 
         // ===== New Folder Modal =====
@@ -741,9 +1341,7 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
 
         async function createFolder() {
             const name = document.getElementById('newFolderName').value.trim();
-            if (!name) {
-                return;
-            }
+            if (!name) return;
 
             const path = currentPath === '/' ? '/' + name : currentPath + '/' + name;
 
@@ -755,12 +1353,11 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                 });
 
                 if (response.ok) {
-                    showToast('Created folder: ' + name, 'success');
+                    showToast('Created: ' + name, 'success');
                     closeModal('newFolderModal');
                     setTimeout(() => location.reload(), 500);
                 } else {
-                    const text = await response.text();
-                    showToast('Create failed: ' + text, 'error');
+                    showToast('Create failed: ' + await response.text(), 'error');
                 }
             } catch (error) {
                 showToast('Create error: ' + error.message, 'error');
@@ -782,16 +1379,12 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
 
         async function renameItem() {
             const newName = document.getElementById('renameName').value.trim();
-            if (!newName) {
-                return;
-            }
+            if (!newName) return;
 
             try {
                 const response = await fetch('?action=rename&path=' + encodeURIComponent(renamePath), {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'new_name=' + encodeURIComponent(newName) + '&csrf_token=' + encodeURIComponent(csrfToken)
                 });
 
@@ -800,8 +1393,7 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                     closeModal('renameModal');
                     setTimeout(() => location.reload(), 500);
                 } else {
-                    const text = await response.text();
-                    showToast('Rename failed: ' + text, 'error');
+                    showToast('Rename failed: ' + await response.text(), 'error');
                 }
             } catch (error) {
                 showToast('Rename error: ' + error.message, 'error');
@@ -811,81 +1403,53 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
         // ===== Modal Helpers =====
         function closeModal(id) {
             document.getElementById(id).classList.remove('active');
-            // Return focus to the element that triggered the modal
             if (lastFocusedElement) {
                 lastFocusedElement.focus();
                 lastFocusedElement = null;
             }
         }
 
-        // Focus trap for modals
         function trapFocus(modal) {
             const focusable = modal.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])');
             if (focusable.length === 0) return;
-
             const first = focusable[0];
             const last = focusable[focusable.length - 1];
-
             modal.addEventListener('keydown', (e) => {
                 if (e.key !== 'Tab') return;
-
                 if (e.shiftKey) {
-                    if (document.activeElement === first) {
-                        e.preventDefault();
-                        last.focus();
-                    }
+                    if (document.activeElement === first) { e.preventDefault(); last.focus(); }
                 } else {
-                    if (document.activeElement === last) {
-                        e.preventDefault();
-                        first.focus();
-                    }
+                    if (document.activeElement === last) { e.preventDefault(); first.focus(); }
                 }
             });
         }
 
-        // Enter key submits the active modal
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                if (document.getElementById('newFolderModal').classList.contains('active')) {
-                    e.preventDefault();
-                    createFolder();
-                } else if (document.getElementById('renameModal').classList.contains('active')) {
-                    e.preventDefault();
-                    renameItem();
-                }
+                if (document.getElementById('newFolderModal').classList.contains('active')) { e.preventDefault(); createFolder(); }
+                else if (document.getElementById('renameModal').classList.contains('active')) { e.preventDefault(); renameItem(); }
             }
         });
 
-        // ===== Toast Notifications =====
+        // ===== Toast =====
         let toastTimer = null;
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.className = 'toast active ' + type;
-
             if (toastTimer) clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => {
-                toast.classList.remove('active');
-            }, 3000);
+            toastTimer = setTimeout(() => toast.classList.remove('active'), 3000);
         }
 
-        // Close modals on Escape
+        // ===== Close modals =====
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                document.querySelectorAll('.modal.active').forEach(m => {
-                    closeModal(m.id);
-                });
+                document.querySelectorAll('.modal.active').forEach(m => closeModal(m.id));
             }
         });
 
-        // Close modals on outside click
         document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    closeModal(modal.id);
-                }
-            });
-            // Set up focus trap
+            modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(modal.id); });
             trapFocus(modal);
         });
 
@@ -903,14 +1467,13 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                 if (visible) visibleCount++;
             });
 
-            // Show empty state if filtering hides all items
             let emptyState = document.getElementById('emptyState');
             if (visibleCount === 0 && q) {
                 if (!emptyState) {
                     emptyState = document.createElement('div');
                     emptyState.id = 'emptyState';
                     emptyState.className = 'empty-state';
-                    emptyState.innerHTML = '<div class="icon">🔍</div><div>No matching files</div>';
+                    emptyState.innerHTML = '<div class="empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div><div class="empty-title">No matching files</div><div class="empty-subtitle">Try a different search term</div>';
                     fileList.appendChild(emptyState);
                 }
                 emptyState.style.display = '';
@@ -919,14 +1482,11 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
             }
         });
 
-        // ===== Client-side Sorting =====
+        // ===== Column-header Sorting =====
         let currentSort = 'name';
         let sortAsc = true;
 
-        // Sort button base labels
-        const sortLabels = { name: 'Name', size: 'Size', date: 'Date' };
-
-        function sortFiles(field, btn) {
+        function sortByColumn(field) {
             if (currentSort === field) {
                 sortAsc = !sortAsc;
             } else {
@@ -934,26 +1494,29 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                 sortAsc = true;
             }
 
-            // Reset all button texts to base labels, then update active one
-            document.querySelectorAll('.sort-btn').forEach(b => {
-                const sortField = b.getAttribute('data-sort');
-                b.classList.remove('active');
-                b.textContent = sortLabels[sortField] || sortField;
+            // Update header indicators
+            document.querySelectorAll('.content-header .sortable').forEach(el => {
+                el.classList.remove('active-sort');
+                const ind = el.querySelector('.sort-indicator');
+                if (ind) ind.textContent = '';
             });
-            btn.classList.add('active');
-            btn.textContent = sortLabels[field] + (sortAsc ? ' ▲' : ' ▼');
+
+            const activeHeader = document.querySelector('.content-header [data-sort="' + field + '"]');
+            if (activeHeader) {
+                activeHeader.classList.add('active-sort');
+                const indicator = activeHeader.querySelector('.sort-indicator');
+                if (indicator) indicator.textContent = sortAsc ? '▲' : '▼';
+            }
 
             const items = Array.from(fileList.querySelectorAll('.file-item'));
 
             items.sort((a, b) => {
-                let va, vb;
-
-                // Always keep directories first
                 const aDir = a.getAttribute('data-type') === 'dir';
                 const bDir = b.getAttribute('data-type') === 'dir';
                 if (aDir && !bDir) return -1;
                 if (!aDir && bDir) return 1;
 
+                let va, vb;
                 switch (field) {
                     case 'name':
                         va = a.getAttribute('data-name') || '';
@@ -972,21 +1535,47 @@ function output_ui_js(string $path, int $max_upload_size, string $csrf_token, in
                 }
             });
 
-            // Also move any empty state element to the end
             const emptyState = document.getElementById('emptyState');
             items.forEach(item => fileList.appendChild(item));
             if (emptyState) fileList.appendChild(emptyState);
         }
 
-        // Make functions globally accessible for onclick handlers
+        // Initialize default sort indicator
+        const defaultIndicator = document.getElementById('sort-indicator-name');
+        if (defaultIndicator) defaultIndicator.textContent = '▲';
+        const defaultSortHeader = document.querySelector('.content-header [data-sort="name"]');
+        if (defaultSortHeader) defaultSortHeader.classList.add('active-sort');
+
+        // ===== Keyboard shortcuts =====
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                getCheckboxes().forEach(cb => {
+                    const row = cb.closest('.file-item');
+                    if (row && row.style.display !== 'none') cb.checked = true;
+                });
+                updateSelectionUI();
+            }
+
+            if (e.key === 'Delete' && getSelectedPaths().length > 0) {
+                bulkDelete();
+            }
+        });
+
+        // ===== Global exports =====
         window.downloadFile = downloadFile;
         window.deleteItem = deleteItem;
+        window.unzipFile = unzipFile;
         window.showNewFolderModal = showNewFolderModal;
         window.createFolder = createFolder;
         window.showRenameModal = showRenameModal;
         window.renameItem = renameItem;
         window.closeModal = closeModal;
-        window.sortFiles = sortFiles;
+        window.sortByColumn = sortByColumn;
+        window.bulkDownload = bulkDownload;
+        window.bulkDelete = bulkDelete;
     })();
     </script>
 <?php

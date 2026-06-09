@@ -35,7 +35,7 @@ function handle_ui_request(array $config): void {
  */
 function handle_ui_action(array $config, string $action, string $path): void {
     // CSRF protection for all mutating actions
-    if (in_array($action, ['upload', 'mkdir', 'delete', 'rename'])) {
+    if (in_array($action, ['upload', 'mkdir', 'delete', 'rename', 'zip-download', 'unzip'])) {
         $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
         if (!ui_csrf_validate($token)) {
             http_response_code(403);
@@ -80,6 +80,12 @@ function handle_ui_action(array $config, string $action, string $path): void {
             break;
         case 'rename':
             handle_rename_action($full_path, $path, $config);
+            break;
+        case 'zip-download':
+            handle_zip_download_action($full_path, $path, $config);
+            break;
+        case 'unzip':
+            handle_unzip_action($full_path, $path, $config);
             break;
         default:
             http_response_code(400);
@@ -309,4 +315,181 @@ function handle_rename_action(string $full_path, string $path, array $config): v
         http_response_code(500);
         echo 'Failed to rename';
     }
+}
+
+/**
+ * Handle zip-download action — creates a ZIP of selected files and streams it.
+ *
+ * @param string $full_path Resolved filesystem path (directory context)
+ * @param string $path Request path
+ * @param array $config Configuration array
+ * @return void
+ */
+function handle_zip_download_action(string $full_path, string $path, array $config): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo 'Method not allowed';
+        return;
+    }
+
+    $paths = $_POST['paths'] ?? [];
+    if (empty($paths) || !is_array($paths)) {
+        http_response_code(400);
+        echo 'No files selected';
+        return;
+    }
+
+    $storage = rtrim($config['storage_path'], '/');
+    $zip = new ZipArchive();
+    $tmp = tempnam(sys_get_temp_dir(), 'webdav_zip_');
+
+    if ($zip->open($tmp, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        http_response_code(500);
+        echo 'Failed to create ZIP';
+        @unlink($tmp);
+        return;
+    }
+
+    $added = 0;
+    foreach ($paths as $relPath) {
+        $relPath = trim($relPath, '/');
+        $item_full = resolve_path('/' . $relPath, $config['storage_path']);
+        if ($item_full === false) {
+            $item_full = $storage . '/' . $relPath;
+            if (!file_exists($item_full)) continue;
+        }
+
+        // Security: ensure resolved path is inside storage
+        $storage_real = realpath($storage);
+        $item_real = realpath($item_full);
+        if ($storage_real === false || $item_real === false || !str_starts_with($item_real, $storage_real)) {
+            continue;
+        }
+
+        if (is_file($item_full)) {
+            $arc_name = basename($item_full);
+            $zip->addFile($item_full, $arc_name);
+            $added++;
+        } elseif (is_dir($item_full)) {
+            $dir_name = basename($item_full) . '/';
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($item_full, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::LEAVES_ONLY
+            );
+            foreach ($iterator as $file) {
+                $relative = substr($file->getPathname(), strlen($item_full) + 1);
+                $zip->addFile($file->getPathname(), $dir_name . $relative);
+                $added++;
+            }
+        }
+    }
+
+    $zip->close();
+
+    if ($added === 0) {
+        http_response_code(404);
+        echo 'No valid files found';
+        @unlink($tmp);
+        return;
+    }
+
+    $size = @filesize($tmp);
+    $zip_name = rawurlencode('files_' . date('Y-m-d_H-i-s') . '.zip');
+
+    header('Content-Type: application/zip');
+    header('Content-Length: ' . $size);
+    header("Content-Disposition: attachment; filename*=UTF-8''{$zip_name}");
+    header('X-Content-Type-Options: nosniff');
+
+    log_request($config, 'ZIP-DOWNLOAD', $path . ' (' . $added . ' files)', 200);
+
+    flush();
+    if (ob_get_level()) { ob_end_flush(); }
+    set_time_limit(0);
+
+    $handle = fopen($tmp, 'rb');
+    if ($handle) {
+        while (!feof($handle)) {
+            echo fread($handle, 8192);
+            flush();
+        }
+        fclose($handle);
+    }
+
+    @unlink($tmp);
+    exit;
+}
+
+/**
+ * Handle unzip action — extracts a ZIP archive into its parent directory.
+ *
+ * @param string $full_path Resolved filesystem path to the ZIP file
+ * @param string $path Request path
+ * @param array $config Configuration array
+ * @return void
+ */
+function handle_unzip_action(string $full_path, string $path, array $config): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo 'Method not allowed';
+        return;
+    }
+
+    if (!file_exists($full_path) || !is_file($full_path)) {
+        http_response_code(404);
+        echo 'Archive not found';
+        return;
+    }
+
+    $ext = strtolower(pathinfo($full_path, PATHINFO_EXTENSION));
+    if (!in_array($ext, ['zip', 'gz', 'tar', 'bz2'])) {
+        http_response_code(400);
+        echo 'Unsupported archive format';
+        return;
+    }
+
+    $storage_real = realpath(rtrim($config['storage_path'], '/'));
+    $file_real = realpath($full_path);
+    if ($storage_real === false || $file_real === false || !str_starts_with($file_real, $storage_real)) {
+        http_response_code(403);
+        echo 'Forbidden';
+        return;
+    }
+
+    if ($ext === 'zip') {
+        $zip = new ZipArchive();
+        if ($zip->open($full_path) !== true) {
+            http_response_code(500);
+            echo 'Failed to open ZIP archive';
+            return;
+        }
+        $zip->extractTo(dirname($full_path));
+        $zip->close();
+    } else {
+        $extract_to = dirname($full_path);
+        $cmd = null;
+        if ($ext === 'gz' || $ext === 'tar') {
+            $cmd = 'tar -xzf ' . escapeshellarg($full_path) . ' -C ' . escapeshellarg($extract_to) . ' 2>&1';
+        } elseif ($ext === 'bz2') {
+            $cmd = 'tar -xjf ' . escapeshellarg($full_path) . ' -C ' . escapeshellarg($extract_to) . ' 2>&1';
+        }
+        if ($cmd) {
+            $output = [];
+            $return_code = 0;
+            exec($cmd, $output, $return_code);
+            if ($return_code !== 0) {
+                http_response_code(500);
+                echo 'Extraction failed: ' . implode("\n", $output);
+                return;
+            }
+        } else {
+            http_response_code(500);
+            echo 'Extraction not supported on this server';
+            return;
+        }
+    }
+
+    log_request($config, 'UNZIP', $path, 200);
+    http_response_code(200);
+    echo 'Archive extracted successfully';
 }
