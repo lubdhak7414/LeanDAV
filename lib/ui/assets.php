@@ -329,6 +329,7 @@ function output_ui_css(): void {
             font-size: 12px;
             width: 18px;
             text-align: center;
+            margin-right: 2px;
         }
 
         .stat-label {
@@ -626,7 +627,7 @@ function output_ui_css(): void {
             display: flex;
             gap: 2px;
             justify-content: flex-end;
-            opacity: 0;
+            opacity: 0.4;
             transition: opacity 0.15s;
         }
 
@@ -638,9 +639,9 @@ function output_ui_css(): void {
         .file-item .actions button {
             background: transparent;
             border: none;
-            color: #71717a;
+            color: #a1a1aa;
             cursor: pointer;
-            padding: 5px;
+            padding: 6px;
             border-radius: 5px;
             transition: all 0.15s;
             display: flex;
@@ -702,8 +703,8 @@ function output_ui_css(): void {
         }
 
         .header-cell input[type="checkbox"] {
-            width: 15px;
-            height: 15px;
+            width: 16px;
+            height: 16px;
         }
 
         /* ===== Empty State ===== */
