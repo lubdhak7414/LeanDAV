@@ -10,7 +10,7 @@ It runs without a database or external PHP dependencies and can be deployed on a
 
 Files can be accessed through WebDAV clients such as Windows File Explorer, macOS Finder, and Linux desktop environments, or through the included browser-based interface.
 
-![LeanDAV Web UI Screenshot](link-to-your-screenshot-image.png)
+![LeanDAV Web UI Screenshot](LeanDav_Web_UI.png)
 
 ## Why LeanDAV?
 
@@ -20,17 +20,17 @@ The project stores files directly on disk and does not require a database. Deplo
 
 ## Features
 
-* WebDAV server implementation in PHP
-* No database required
-* No Composer dependencies
-* Browser-based file manager
-* Docker deployment support
-* File uploads and downloads
-* HTTP Range request support
-* File and directory operations (copy, move, rename, delete)
-* WebDAV locking support
-* Configurable storage and upload limits
-* Compatible with Windows, macOS, and Linux WebDAV clients
+- WebDAV server implementation in PHP
+- No database required
+- No Composer dependencies
+- Browser-based file manager
+- Docker deployment support
+- File uploads and downloads
+- HTTP Range request support
+- File and directory operations (copy, move, rename, delete)
+- WebDAV locking support
+- Configurable storage and upload limits
+- Compatible with Windows, macOS, and Linux WebDAV clients
 
 ---
 
@@ -66,14 +66,13 @@ For production deployments, use HTTPS and a reverse proxy. The repository includ
 
 #### Requirements
 
-* PHP 8.0+
-* Apache or Nginx
-* PHP extensions:
-
-  * fileinfo
-  * xmlwriter
-  * dom
-  * json
+- PHP 8.0+
+- Apache or Nginx
+- PHP extensions:
+  - fileinfo
+  - xmlwriter
+  - dom
+  - json
 
 #### Setup
 
@@ -215,10 +214,10 @@ LeanDAV implements the following WebDAV methods and is designed to work with com
 
 ### Additional Support
 
-* HTTP Range requests
-* Recursive directory operations
-* Stream-based uploads
-* File locking with automatic cleanup
+- HTTP Range requests
+- Recursive directory operations
+- Stream-based uploads
+- File locking with automatic cleanup
 
 ---
 
